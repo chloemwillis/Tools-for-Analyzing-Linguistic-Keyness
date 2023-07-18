@@ -1,0 +1,8 @@
+{
+  "query": "lang:en -is:retweet -is:quote",
+  "expansions": "author_id,geo.place_id,referenced_tweets.id,referenced_tweets.id.author_id,attachments.media_keys",
+  "user_fields": "created_at,description,id,location,name,protected,public_metrics,username",
+  "place_fields": "full_name,id,country,geo,place_type",
+  "tweet_fields": "id,text,attachments,author_id,conversation_id,created_at,entities,lang,public_metrics,referenced_tweets",
+  "media_fields": "media_key,type,url,public_metrics,alt_text"
+}
