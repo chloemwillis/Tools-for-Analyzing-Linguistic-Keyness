@@ -30,7 +30,7 @@ def floor_time(dt, to=1, unit="days"):
     """
     if to < 1 or not isinstance(to, int):
         raise Exception("Invalid to parameter: {}".format(to))
-        
+    
     if unit=="days":
         bin_interval = datetime.timedelta(days=to) / datetime.timedelta(days=1)
         old_time_offset = (dt.replace(tzinfo=None) - dt.min).days
@@ -40,7 +40,7 @@ def floor_time(dt, to=1, unit="days"):
                                        minutes=dt.minute,
                                        seconds=dt.second,
                                        microseconds=dt.microsecond)
-        
+    
     elif unit in ["hours", "minutes", "seconds"]:
         bin_interval = datetime.timedelta(**{unit: to}).total_seconds()
         old_time_offset = (dt.replace(tzinfo=None) - dt.min).seconds
@@ -48,7 +48,7 @@ def floor_time(dt, to=1, unit="days"):
         return dt - datetime.timedelta(days=0, 
                                        seconds=old_time_offset - new_time_offset, 
                                        microseconds=dt.microsecond)
-        
+    
     else:
         raise Exception("Unknown unit: {}".format(unit))
 
