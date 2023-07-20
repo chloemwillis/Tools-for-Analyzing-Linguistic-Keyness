@@ -484,24 +484,25 @@ if __name__ == "__main__":
                         the column headers in the input CSV that designate Tweet text")
     parser.add_argument("--time-col-suffix", type="str", default="tweet.created_at", help="The suffix \
                         of the column headers in the input CSV that designate Tweet post times")
-    parser.add_argument("--label-column", type="str", default="labels", help="The name of the column \
+    parser.add_argument("--label-column", type="str", default="label", help="The name of the column \
                         in the input CSV that designates the label of a pair of Tweets (e.g. indicating \
                         the level at which it is filtered out)")
     parser.add_argument("--use-bins", dest="use_bins", action="store_true", help="Bin Tweets by time and \
                         calculate keyness within each bin, in addition to calculating keyness across the \
                         dataset as a whole")
-    parser.add_argument("--timebin-unit", type="str", default="months", help="The unit of the timebin interval \
-                        that is used to bin Tweets by time for keyness calculation (valid options: \"days\", \
-                        \"weeks\", \"months\", \"years\"). Note: this does not refer to the timebins that \
-                        were used for collecting the data, but rather the granularity of bins that will be \
-                        used for analyzing keyness across time.")
-    parser.add_argument("--timebin-interval", type="int", default=1, help="The timebin interval size (without \
-                        units). If binning by month, this must be a divisor of 12. Note: this does not refer \
-                        to the timebins that were used for collecting the data, but rather the granularity \
-                        of bins that will be used for analyzing keyness across time.")
-    parser.add_argument("--timebin-formatting", type="str", default=None, help="The string formatting code \
-                        to represent bins as column names, using strftime format codes; for example, %Y_%m \
-                        would create bin names such as 2023_05 (for May 2023), 2023_01 (for Jan 2023); see \
+    parser.add_argument("--bin-time-unit", dest="timebin_unit", type="str", default="months", help="The \
+                        unit of the time interval that is used to bin Tweets by time for keyness \
+                        calculation (valid options: \"days\", \"weeks\", \"months\", \"years\"). Note: \
+                        this does not refer to the timebins that were used for collecting the data, but \
+                        rather the granularity of bins that will be used for analyzing keyness across time.")
+    parser.add_argument("--bin-time-interval", dest="timebin_interval", type="int", default=1, help="The \
+                        bin time interval size (without units). If binning by month, this must be a divisor \
+                        of 12. Note: this does not refer to the timebins that were used for collecting the \
+                        data, but rather the granularity of bins that will be used for analyzing keyness \
+                        across time.")
+    parser.add_argument("--bin-formatting", dest="timebin_formatting", type="str", default=None, help="The \
+                        string formatting code to represent bins as column names, using strftime format \
+                        codes; for example, %Y_%m would create bin names such as 2023_05 (for May 2023); see \
                         https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes \
                         for the list of codes. If this argument is not provided, bins are labeled by their \
                         full timestamp, with the prefix bin_")
