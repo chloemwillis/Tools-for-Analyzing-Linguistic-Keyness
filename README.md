@@ -16,6 +16,16 @@ Users must be authorized to interact with Twitter's API. You'll need to have a d
 
 Some of the code in this repository draws on the [NSFW Detection Machine Learning Model](https://github.com/GantMan/nsfw_model) and [Tweetbotornot](https://github.com/mkearney/tweetbotornot). You will need to install these tools from their respective GitHub repositories to classify images ([NSFW Detection Machine Learning Model](https://github.com/GantMan/nsfw_model)) and to classify users as bots ([Tweetbotornot](https://github.com/mkearney/tweetbotornot)). 
 
+Our codebase also makes use of <code>twarc2</code>. [Twarc2](https://twarc-project.readthedocs.io/en/latest/twarc2_en_us/#configure) is a Python library for archiving Twitter JSON data. You don't need to manually configure <code>twarc2</code> with your API access credentials to use our codebase (assuming you follow the procedure outlined below), but you will need to if you want to use the full range of what <code>twarc2</code> has to offer. Assuming you already have Python 3 installed (if not, click [here](https://www.python.org/downloads/)), you can install <code>twarc2</code> from the terminal using [pip](https://pip.pypa.io/en/stable/installation/) install: 
+
+<code>pip install --upgrade twarc</code>
+
+Mac users can also install <code>twarc</code> using [Homebrew](https://brew.sh/):
+
+<code>brew install twarc</code>
+
+Next you need to tell twarc what your API access credentials are and grant it access to to your App. Type <code>twarc2 configure</code> into the terminal and follow the prompts. First, it will ask for your Bearer Token. Then it will ask you `Add API keys and secrets for user mode authentication [y or n]?` -- type <code>y</code> into the terminal. Then enter your API Key and API Secret. Finally it will ask you whether you'd like to obtain your user keys by (1) generating access keys by visiting Twitter or (2) manually entering your access token and secret. Type <code>2</code> into the terminal and enter your Access Token and Access Token Secret. Now you're ready to use <code>twarc2</code> independent of this codebase.
+
 ## Procedure
 
 Assuming you want to construct two corpora (a study and a reference) for a comparative analysis (e.g. keyness or keywords analysis), we recommend you proceed through the following steps to create matching corpora. Depending on your use case or research question, you may want to tweak or skip the steps involving filtering Tweets based on some criteria.
@@ -73,21 +83,7 @@ Once you have set up your API access and located your credentials, you should sa
 }
 ```
 
-We recommend having this JSON file open while you complete the next step so you can easily copy-paste everything to configure <code>twarc2</code>. 
-
-### Step 2: Install and configure twarc2
-
-[Twarc2](https://twarc-project.readthedocs.io/en/latest/twarc2_en_us/#configure) is a Python library for archiving Twitter JSON data that is key to our codebase. Assuming you already have Python 3 installed (if not, click [here](https://www.python.org/downloads/)), you can install <code>twarc2</code> from the terminal using [pip](https://pip.pypa.io/en/stable/installation/) install: 
-
-<code>pip install --upgrade twarc</code>
-
-Mac users can also install <code>twarc</code> using [Homebrew](https://brew.sh/):
-
-<code>brew install twarc</code>
-
-Next you need to tell twarc what your API access credentials are and grant it access to to your App. Type <code>twarc2 configure</code> into the terminal and follow the prompts. First, it will ask for your Bearer Token. Then it will ask you `Add API keys and secrets for user mode authentication [y or n]?` -- type <code>y</code> into the terminal. Then enter your API Key and API Secret. Finally it will ask you whether you'd like to obtain your user keys by (1) generating access keys by visiting Twitter or (2) manually entering your access token and secret. Type <code>2</code> into the terminal and enter your Access Token and Access Token Secret. Now you're almost ready to start harvesting Tweets! First you will need to configure your query and search criteria.
-
-### Step 3: Configure your query and search criteria
+### Step 2: Configure your query and search criteria
 
 The file `query_config.json` contains the settings that will be applied to your searches for both the study and reference corpus. The settings used for our search are as follows:
 
@@ -138,7 +134,7 @@ hanbin
 @shxx131bi131
 ```
 
-### Step 4: Harvest the Tweets for the study corpus
+### Step 3: Harvest the Tweets for the study corpus
 
 To harvest study Tweets, use the `harvest_tweets.py` file. You'll write something like the following in the Terminal:
 
@@ -173,7 +169,7 @@ When harvesting the study Tweets, they are binned by hour by default, such that 
 
 The crucial output of harvesting study Tweets is a CSV file containing the Tweets (by default, `study.csv`)
 
-### Step 5: Harvest the Tweets for the reference corpus
+### Step 4: Harvest the Tweets for the reference corpus
 
 To harvest reference Tweets, use `harvest_tweets.py` again, this time via a call like:
 
@@ -190,7 +186,7 @@ The *optional reference args* are specific to harvesting reference Tweets. Notab
 
 The crucial output of harvesting reference Tweets is a CSV file containing the Tweets (by default, `reference.csv`)
 
-### Step 6: Label Tweets for exclusion
+### Step 5: Label Tweets for exclusion
 
 Tweets in each corpus can optionally be given a *label* that assigns them to a group. When pairing Tweets across corpora, members of a pair will be from the same group wherever possible. The calculation of keyness scores can be restricted to Tweets from particular groups. In this way, labelling can be used to filter the data, at levels of a filtering hierarchy.
 
@@ -200,7 +196,7 @@ If you want to label Tweets, you can do so by adding a `label` column to the Twe
 
 Labelling is not required; you can proceed with the analysis with unlabelled Tweet CSVs.
 
-### Step 7: Pair Tweets across the study and reference corpora
+### Step 6: Pair Tweets across the study and reference corpora
 
 Once the study and reference Tweets are harvested, they need to be paired with each other by timebin and (if labeled) group. This ensures that they are as comparable to each other as possible.
 
@@ -224,7 +220,7 @@ In this case, *optional args* of interest include the following:
 
 The output of `align_corpora.py` is a CSV file that combines all the information from the study and reference CSVs. The columns are copied from each file, with prefixes `study_` and `reference_` to designate the source of the information. Each row is no longer a single Tweet, but rather a *pair* of Tweets that are matched by timebin (and, if required, by label). A new `pair_id` column contains a unique ID for each pair of Tweets, and (if matching is conducted by group) a `label` column indicates which group the pair belongs to.
 
-### Step 8: Calculate keyness
+### Step 7: Calculate keyness
 
 Once you have a CSV file that pairs each study Tweet with a reference Tweet, the file `keyness.py` can be used to calculate keyness scores for words in these corpora. Basic usage is as follows, assuming the input CSV file is `paired.csv`:
 
@@ -255,7 +251,7 @@ If the analysis is conducted by time-based bins, there will be one copy of each 
 
 ## Cite
 
-DOI coming soon
+DOI coming soon!
 
 ## Contributors 
 
