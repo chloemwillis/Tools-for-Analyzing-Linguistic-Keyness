@@ -219,7 +219,7 @@ if __name__ == "__main__":
     # Subparser for harvesting study Tweets
     parser_study = subparsers.add_parser("study", description="Harvest study Tweets", 
                                          help="Harvest Tweets containing study terms between two dates")
-    parser_study.add_argument("study_terms", dest="include_name", type=str,
+    parser_study.add_argument("--study_terms", dest="include_name", type=str,
                               help="Name of the .txt file specifying the search terms to include")
     parser_study.add_argument("--exclude-terms", dest="exclude_name", type=str, default=None,
                               help="Name of the .txt file specifying the search terms to exclude")
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     parser_ref = subparsers.add_parser("reference", description="Harvest reference Tweets", 
                                        help="Harvest Tweets that are time-matched to a study corpus, \
                                              but don't contain study terms")
-    parser_ref.add_argument("study_terms", dest="exclude_name", type=str,
+    parser_ref.add_argument("--study_terms", dest="exclude_name", type=str,
                             help="Name of the .txt file specifying the search terms for the study \
                                   corpus, which are avoided in the reference corpus")
     parser_ref.add_argument("--timebin-counts", dest="timebin_counts_name", type=str, 
@@ -253,7 +253,7 @@ if __name__ == "__main__":
                                   based on the study corpus")
     parser_ref.add_argument("--count-multiplier", dest="timebin_count_multiplier", type=float, default=1.25, 
                             help="Multiplier of timebin counts, to harvest extra reference Tweets per bin")
-    parser_study.add_argument("--filename-stem", dest="out_stem", type=str, default="reference",
+    parser_ref.add_argument("--filename-stem", dest="out_stem", type=str, default="reference",
                               help="The name to use for output files (Tweet JSONL and CSV).")
     parser_ref.set_defaults(purpose="reference", count_timebins=False, start_date=None, end_date=None)
     
