@@ -18,6 +18,7 @@ across all bins) by providing the --include-bin-counts flag.
 
 from count_tweet_words import extract_words
 from align_corpora import get_timebin_start
+import argparse
 import datetime
 import dateutil.parser
 import csv
@@ -450,7 +451,7 @@ def save_df(keyness_df, output_path, flatten=True, flat_col_sep=".", sort_by="ke
         if flatten:
             sort_by = "overall_count" + flat_col_sep + sort_by
         else:
-        sort_by = ("overall_count", sort_by)
+            sort_by = ("overall_count", sort_by)
     
     # Flatten columns if required
     if flatten and isinstance(keyness_df.columns, pd.core.indexes.multi.MultiIndex):
@@ -469,48 +470,48 @@ def save_df(keyness_df, output_path, flatten=True, flat_col_sep=".", sort_by="ke
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "Calculate keyness scores for words from a CSV of \
                                                     Tweets paired across study and reference corpora")
-    parser.add_argument("input_path", type="str", help="Path to the input CSV file of Tweets paired \
+    parser.add_argument("input_path", type=str, help="Path to the input CSV file of Tweets paired \
                         across a study and reference corpus")
-    parser.add_argument("output_path", type="str", help="Path to the output CSV file")
-    parser.add_argument("--corpus-names", type="str", nargs="+", default=["study", "reference"],
+    parser.add_argument("output_path", type=str, help="Path to the output CSV file")
+    parser.add_argument("--corpus-names", type=str, nargs="+", default=["study", "reference"],
                         help="Names of corpora that are used as prefixes in column headers in the \
                         input CSV")
-    parser.add_argument("--target-corpus", type="str", default="study", help="Name of the target \
+    parser.add_argument("--target-corpus", type=str, default="study", help="Name of the target \
                         (study) corpus that is used as a prefix in column headers in the input CSV")
-    parser.add_argument("--input-col-sep", type="str", default="_", help="The character that is used \
+    parser.add_argument("--input-col-sep", type=str, default="_", help="The character that is used \
                         to separate prefixes (corpus names) from suffixes (types of information) in \
                         column headers in the input CSV")
-    parser.add_argument("--tweet-col-suffix", type="str", default="tweet.text", help="The suffix of \
+    parser.add_argument("--tweet-col-suffix", type=str, default="tweet.text", help="The suffix of \
                         the column headers in the input CSV that designate Tweet text")
-    parser.add_argument("--time-col-suffix", type="str", default="tweet.created_at", help="The suffix \
+    parser.add_argument("--time-col-suffix", type=str, default="tweet.created_at", help="The suffix \
                         of the column headers in the input CSV that designate Tweet post times")
-    parser.add_argument("--label-column", type="str", default="label", help="The name of the column \
+    parser.add_argument("--label-column", type=str, default="label", help="The name of the column \
                         in the input CSV that designates the label of a pair of Tweets (e.g. indicating \
                         the level at which it is filtered out)")
     parser.add_argument("--use-bins", dest="use_bins", action="store_true", help="Bin Tweets by time and \
                         calculate keyness within each bin, in addition to calculating keyness across the \
                         dataset as a whole")
-    parser.add_argument("--bin-time-unit", dest="timebin_unit", type="str", default="months", help="The \
+    parser.add_argument("--bin-time-unit", dest="timebin_unit", type=str, default="months", help="The \
                         unit of the time interval that is used to bin Tweets by time for keyness \
                         calculation (valid options: \"days\", \"weeks\", \"months\", \"years\"). Note: \
                         this does not refer to the timebins that were used for collecting the data, but \
                         rather the granularity of bins that will be used for analyzing keyness across time.")
-    parser.add_argument("--bin-time-interval", dest="timebin_interval", type="int", default=1, help="The \
+    parser.add_argument("--bin-time-interval", dest="timebin_interval", type=int, default=1, help="The \
                         bin time interval size (without units). If binning by month, this must be a divisor \
                         of 12. Note: this does not refer to the timebins that were used for collecting the \
                         data, but rather the granularity of bins that will be used for analyzing keyness \
                         across time.")
-    parser.add_argument("--bin-formatting", dest="timebin_formatting", type="str", default=None, help="The \
+    parser.add_argument("--bin-formatting", dest="timebin_formatting", type=str, default=None, help="The \
                         string formatting code to represent bins as column names, using strftime format \
-                        codes; for example, %Y_%m would create bin names such as 2023_05 (for May 2023); see \
+                        codes; for example, %%Y_%%m would create bin names such as 2023_05 (for May 2023); see \
                         https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes \
                         for the list of codes. If this argument is not provided, bins are labeled by their \
                         full timestamp, with the prefix bin_")
-    parser.add_argument("--keep-labels", type="str", nargs="+", default=None, help="The labels of Tweets to \
+    parser.add_argument("--keep-labels", type=str, nargs="+", default=None, help="The labels of Tweets to \
                         keep and use for the keyness analysis; paired Tweets with other labels in the input \
                         CSV will be filtered out from the analysis. If no labels are provided, all Tweets \
                         are used in the analysis.")
-    parser.add_argument("--exclude-terms-path", type="str", default=None, help="The path to a TXT file \
+    parser.add_argument("--exclude-terms-path", type=str, default=None, help="The path to a TXT file \
                         containing terms that are to be excluded from the keyness analysis (one per line). \
                         This can be used to exclude the query terms by which the data were harvested, since \
                         query terms are assumed to be key.")

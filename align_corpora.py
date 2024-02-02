@@ -178,7 +178,7 @@ if __name__ == "__main__":
     parser.add_argument("--timebin-interval", default=1, type=int, help="The timebin interval size (without units)")
     parser.add_argument("--timebin-unit", default="hours", type=str, help="The unit of the timebin interval (valid options: \"days\", \"hours\", \"minutes\", \"seconds\")")
     parser.add_argument("--label-column", default="label", type=str, help="Name of column where Tweet labels are stored")
-    parser.add_argument("--label-hierarchy", default=None, type="str", nargs="+", help="List of labels, separated by spaces, in \
+    parser.add_argument("--label-hierarchy", default=None, type=str, nargs="+", help="List of labels, separated by spaces, in \
                         order of low-level (survives all filters) to high-level (removed by the first filter)")
     parser.add_argument("--unlabeled", dest="use_labels", action="store_false", help="Do not group Tweets by label")
     parser.add_argument("--id-column", default="pair_id", type=str, help="Name of column where paired Tweet IDs will be stored")
