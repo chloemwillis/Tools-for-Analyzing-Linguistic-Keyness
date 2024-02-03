@@ -60,10 +60,11 @@ def extract_images(tweet_filepaths):
                 if isinstance(results_page, str):
                     results_page = json.loads(results_page.strip())
                 for parsed_tweet in parse_page(results_page, ["tweet.id", "tweet.media_url"]):
-                    if parsed_tweet["tweet.media_url"] is not None:
-                        image_urls[parsed_tweet["tweet.id"]] = parsed_tweet["tweet.media_url"]
+                    if isinstance(parsed_tweet, list) and len(parsed_tweet) >=2:
+                        tweet_id, media_url = parsed_tweet[0], parsed_tweet[1]
+                        if media_url is not None:
+                            image_urls[tweet_id] = media_url
     return image_urls
-
 
 def load_from_url(image_url, image_size):
     """Loads an image from URL"""
@@ -91,7 +92,7 @@ def load_images(image_urls, image_size, verbose=False, img_batch_size=3200, **kw
     loaded_image_paths = []
     batch_number = 1
 
-    for (tweet_id, img_url) in image_urls:
+    for tweet_id, img_url in image_urls.items():
         try:
             image = load_from_url(img_url, image_size)
             image = keras.preprocessing.image.img_to_array(image)
@@ -171,12 +172,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     image_urls = extract_images(args.tweet_filepaths)
-    model = load_model(args.model_path)
+    model = load_model(args.saved_model_path)
     
     print("{}: Starting".format(datetime.now(timezone.utc).astimezone(get_localzone()).strftime("%b %e %H:%M")))
     image_preds = classify(model, image_urls, args.image_dim, verbose=args.verbose)
     
-    with open(args.output, "w", encoding="utf-8", newline="") as out_file:
+    with open(args.out_path, "w", encoding="utf-8", newline="") as out_file:
         writer = csv.DictWriter(out_file, ["tweet.id", "image", 'p_drawing', 'p_hentai', 'p_neutral', 'p_porn', 'p_sexy'])
         writer.writeheader()
         writer.writerows(image_preds)
