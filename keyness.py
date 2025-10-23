@@ -5,7 +5,7 @@ Authors: Simon Todd & Chloe Willis
 Date: July 2023
 
 This code calculates keyness scores for words used in a study and reference
-corpus of Tweets. The Tweets are assumed to be paired across corpora and stored
+corpus of entries. The entries are assumed to be paired across corpora and stored
 together in a CSV file. The keyness scores are then saved to a CSV file.
 
 By default, the keyness scores are calculated across the entire corpus. They
@@ -16,7 +16,7 @@ across all bins) by providing the --include-bin-counts flag.
 ===============================================================================
 """
 
-from count_tweet_words import extract_words
+from count_words import extract_words
 from align_corpora import get_timebin_start
 import argparse
 import datetime
@@ -24,7 +24,7 @@ import dateutil.parser
 import csv
 from collections import Counter
 import pandas as pd
-from scipy.stats import chi2_contingency
+from scipy.stats import chi2_contingency, entropy
 import numpy as np
 import functools
 import re
@@ -62,22 +62,23 @@ STRFTIME_REGEX_MAPS = {
 
 
 def create_binned_wordcount_df(csv_filepath, corpora=("study", "reference"), col_sep="_",
-                               tweet_col_suffix="tweet.text", use_bins=True, include_bin_counts=False,
+                               text_col_suffix="text", use_bins=True, include_bin_counts=False,
                                timebin_unit="months",  timebin_interval=1, 
-                               time_col_suffix="tweet.created_at", label_column="label", 
-                               keep_labels=None, exclude_terms=None, timebin_formatting=None):
-    """Converts a CSV of tweets to a DataFrame of counts of distinct
-    words in the tweets by bin, for a provided set of columns.
+                               time_col_suffix="time", label_column="label", 
+                               keep_labels=None, exclude_terms=None, timebin_formatting=None,
+                               include_dispersions=False):
+    """Converts a CSV of entries to a DataFrame of counts of distinct
+    words in the entries by bin, for a provided set of columns.
     
     Arguments
     ---------
-    csv_filepath: str; path to the CSV file containing Tweets paired
+    csv_filepath: str; path to the CSV file containing entries paired
                   across corpora
     corpora: iter(str); list of the corpus names which are assumed 
              to be prefixes of the column headers in the CSV
     col_sep: str; separator between prefix (corpus) and suffix (type)
              of column headers
-    tweet_col_suffix: str; suffix of the column containing Tweets
+    text_col_suffix: str; suffix of the column containing texts
     use_bins: bool; whether to bin the counts by timebin (True), or just give
               overall counts across all corpora
     include_bin_counts: bool; whether to include columns that count how many bins
@@ -87,17 +88,20 @@ def create_binned_wordcount_df(csv_filepath, corpora=("study", "reference"), col
                   (valid options: "days", "weeks", "months", "years")
     timebin_interval: int (default 1); the number of time units to be included
                       in a timebin (for months, must be a divisor of 12)
-    time_col_suffix: str; suffix of the column containing times at which
-                     Tweets were posted
+    time_col_suffix: str; suffix of the column containing times at which texts
+                     were created
     label_column: str; the name of the column that contains labels that
-                  can be used to filter the Tweets
-    keep_labels: iter(str); list of labels of Tweets that will be used to
-                 calculate counts (if None, all Tweets are used)
+                  can be used to filter the entries
+    keep_labels: iter(str); list of labels of entries that will be used to
+                 calculate counts (if None, all entries are used)
     exclude_terms: iter(str); list of terms to be excluded from counting
                    (e.g. because they are query terms)
     timebin_formatting: str; the strftime format codes for naming the timebins.
                         If None, names the timebins as the ISO format timestamp
                         of the bin start time, prefixed by bin_
+    include_dispersions: bool; whether to include columns that use the probability
+                         distribution of each word over bins in each corpus to
+                         calculate a dispersion value for that word in that corpus
     """
     # Determine the function to use for getting timebin start time
     if timebin_unit == "weeks":
@@ -122,43 +126,46 @@ def create_binned_wordcount_df(csv_filepath, corpora=("study", "reference"), col
             
             # Count words for corpora
             for corpus in corpora:
-                tweet = row[corpus + col_sep + tweet_col_suffix]
-                time = row[corpus + col_sep + time_col_suffix]
-                tweet_bin = "overall_count"
+                entry = row[corpus + col_sep + text_col_suffix]
+                entry_bin = "overall_count"
                 if use_bins:
-                    tweet_bin_starttime = get_starttime(time_str, timebin_unit, timebin_interval)
+                    time_str = row[corpus + col_sep + time_col_suffix]
+                    entry_bin_starttime = get_starttime(time_str, timebin_unit, timebin_interval)
                     if timebin_formatting is not None:
-                        tweet_bin = dateutil.parser.isoparse(tweet_bin_starttime).strftime(timebin_formatting)
+                        entry_bin = dateutil.parser.isoparse(entry_bin_starttime).strftime(timebin_formatting)
                     else:
-                        tweet_bin = "bin_" + tweet_bin_starttime
-                words = extract_words(tweet)
+                        entry_bin = "bin_" + entry_bin_starttime
+                words = extract_words(entry)
                 
                 # Exclude terms as required
                 if exclude_terms is not None:
                     words = [word for word in words if word not in exclude_terms]
                 
                 # Update counter
-                if tweet_bin not in all_counters:
-                    all_counters[tweet_bin] = dict()
-                bin_counters = all_counters[tweet_bin]
+                if entry_bin not in all_counters:
+                    all_counters[entry_bin] = dict()
+                bin_counters = all_counters[entry_bin]
                 if corpus not in bin_counters:
                     bin_counters[corpus] = Counter()
                 bin_counters[corpus].update(words)
     
     # Convert to DataFrame with MultiIndex
-    counts_df = pd.DataFrame.from_dict({(tweet_bin, corpus): counter 
-                                        for (tweet_bin, bin_counter) in sorted(all_counters.items())
+    counts_df = pd.DataFrame.from_dict({(entry_bin, corpus): counter 
+                                        for (entry_bin, bin_counter) in sorted(all_counters.items())
                                         for (corpus, counter) in bin_counter.items()
                                        }).fillna(0)
     
     # If not binning counts, return df that just contains overall counts;
     # if binning counts, add overall counts columns and (optionally) bin counts
+    # and dispersion
     if use_bins:
         add_overall_counts(counts_df, timebin_formatting=timebin_formatting)
         if include_bin_counts:
             add_bin_counts(counts_df, timebin_formatting=timebin_formatting)
+        if include_dispersions:
+            add_dispersions(counts_df, timebin_formatting=timebin_formatting)
     else:
-        counts_df = counts_df["overall_counts"]
+        counts_df = counts_df["overall_count"]
     
     return counts_df
 
@@ -200,23 +207,30 @@ def add_overall_counts(counts_df, corpus_level=1, **kwargs):
     nonbin_columns = get_nonbin_columns(counts_df, **kwargs)
     overall_counts = (counts_df
                   .drop(nonbin_columns, axis=1)
-                  .groupby(level=corpus_level, axis=1, sort=False)
+                  .T
+                  .groupby(level=corpus_level, sort=False)
                   .agg(lambda df: 
-                       apply_binned(df, lambda subdf: subdf.sum(axis=1), 
+                       apply_binned(df, lambda subdf: subdf.sum(), 
                                     drop_level=corpus_level)
                       )
+                  .T
                  )
     counts_df[[("overall_count", corpus) for corpus in overall_counts.columns]] = overall_counts
 
 
-@functools.lru_cache(maxsize=None)
 def get_nonbin_columns(binned_df, bin_level=0, **kwargs):
     """Gets a list of the column names in a dataframe that do not represent bins"""
     columns = binned_df.columns
     if isinstance(columns, pd.core.indexes.multi.MultiIndex):
-        column_names = list(columns.levels[bin_level])
+        column_names = tuple(columns.levels[bin_level])
     else:
-        column_names = list(columns)
+        column_names = tuple(columns)
+    return get_nonbin_column_names(column_names, **kwargs)
+
+
+@functools.lru_cache(maxsize=None)
+def get_nonbin_column_names(column_names, **kwargs):
+    """Gets a list of column names that do not represent bins"""
     return [column_name for column_name in column_names if not is_bin(str(column_name), **kwargs)]
 
 
@@ -240,10 +254,14 @@ def timebin_to_pattern(timebin_formatting):
     return pattern
 
 
-def apply_binned(grouped_df, func, drop_level=0, drop_axis=1, *args, **kwargs):
+def apply_binned(grouped_df, func, drop_level=0, drop_axis=0, transpose=False, *args, **kwargs):
     """Applies a function to a DataFrameGroupBy, by discarding a level of a multiindex."""
-    plain_df = grouped_df.droplevel(level=drop_level, axis=drop_axis)
-    return func(plain_df, *args, **kwargs)
+    if transpose:
+        plain_df = grouped_df.droplevel(level=drop_level, axis=drop_axis).T
+        return func(plain_df, *args, **kwargs).T
+    else:
+        plain_df = grouped_df.droplevel(level=drop_level, axis=drop_axis)
+        return func(plain_df, *args, **kwargs)
 
 
 def add_bin_counts(counts_df, corpus_level=1, **kwargs):
@@ -251,11 +269,13 @@ def add_bin_counts(counts_df, corpus_level=1, **kwargs):
     nonbin_columns = get_nonbin_columns(counts_df, **kwargs)
     bin_counts = (counts_df
                   .drop(nonbin_columns, axis=1)
-                  .groupby(level=corpus_level, axis=1, sort=False)
+                  .T
+                  .groupby(level=corpus_level, sort=False)
                   .agg(lambda df: 
-                       apply_binned(df, lambda subdf: (subdf > 0).sum(axis=1), 
+                       apply_binned(df, lambda subdf: (subdf > 0).sum(), 
                                     drop_level=corpus_level)
                       )
+                  .T
                  )
     counts_df[[("bin_count", corpus) for corpus in bin_counts.columns]] = bin_counts
 
@@ -270,7 +290,8 @@ def score_keyness(counts, statistics=("g",), target_corpus="study", tidy_df=True
     counts: DataFrame of word counts per corpus, where headers are corpus names
             and each row represents a different word (labeled as the index)
     statistics: tuple(str); the statistics to calculate as a measure of keyness.
-                Currently only "g" (signed G-statistic) is available)
+                Default is signed G ("g"), but signed KL divergence ("kl") is also
+                supported; to calculate both, provide statistics=("g", "kl")
     target_corpus: str; name of the corpus that is the study corpus (the input DF
                    has a column of counts with this name)
     tidy_df: bool; whether to tidy the DataFrame by pulling out a word column and
@@ -353,10 +374,10 @@ def calculate_keyness_statistic(counts, totals, statistic, target_index=0,
     
     if total_count <= cache_sum_threshold:
         get_statistic = eval("_cache_signed_" + statistic)
-        return get_statistic(tuple(counts), totals, target_index=target_index,
-                             negatives=negatives, **kwargs)
+        counts = tuple(counts)
+    else:
+        get_statistic = eval("_calculate_signed_" + statistic)
     
-    get_statistic = eval("_calculate_signed_" + statistic)
     return get_statistic(counts, totals, target_index=target_index, negatives=negatives, **kwargs)
 
 
@@ -366,9 +387,10 @@ def _calculate_signed_g(counts, totals, target_index=0, negatives=True, **kwargs
     
     Arguments
     ---------
-    counts: tuple(int); a row containing the counts for a given word across different
-            corpora
-    totals: tuple(int); a row containing the total counts across all words in each corpus
+    counts: pd.Series(int) or tuple(int); a row containing the counts for a given word across
+            different corpora
+    totals: pd.Series(int) or tuple(int); a row containing the total counts across all words
+            in each corpus
     target_index: int; the index of the column that represents the study corpus
     negatives: bool; whether to set the G-statistic to be negative if the observed count
                in the study corpus is lower than the expected count
@@ -377,7 +399,10 @@ def _calculate_signed_g(counts, totals, target_index=0, negatives=True, **kwargs
     (g, _, _, expected_table) = chi2_contingency(table, correction=False, lambda_=0)
     
     if negatives:
-        observed_target = counts[target_index]
+        if isinstance(counts, pd.Series):
+            observed_target = counts.iloc[target_index]
+        else:
+            observed_target = counts[target_index]
         expected_target = expected_table[0][target_index]
         if observed_target < expected_target:
             g = -g
@@ -392,6 +417,43 @@ def _cache_signed_g(counts, totals, target_index=0, negatives=True, **kwargs):
                                negatives=negatives, **kwargs)
 
 
+def _calculate_signed_kl(counts, totals, target_index=0, negatives=True, **kwargs):
+    """Calculates the KL divergence for a row of counts, given a row of corresponding
+    total counts. 
+    
+    Arguments
+    ---------
+    counts: pd.Series(int) or tuple(int); a row containing the counts for a given word across
+            different corpora
+    totals: pd.Series(int) or tuple(int); a row containing the total counts across all words
+            in each corpus
+    target_index: int; the index of the column that represents the study corpus
+    negatives: bool; whether to set the KL divergence to be negative if the observed probability
+               in the study corpus is lower than the expected probability
+    """
+    kl = entropy(counts, totals, base=2)
+    
+    if negatives:
+        if isinstance(counts, pd.Series):
+            observed_prob = counts.iloc[target_index] / sum(counts)
+        else:
+            observed_prob = counts[target_index] / sum(counts)
+        if isinstance(totals, pd.Series):
+            expected_prob = totals.iloc[target_index] / sum(totals)
+        else:
+            expected_prob = totals[target_index] / sum(totals)
+        if observed_prob < expected_prob:
+            kl = -kl
+    
+    return kl
+
+
+@functools.lru_cache(maxsize=None)
+def _cache_signed_kl(counts, totals, target_index=0, negatives=True, **kwargs):
+    """Uses caching to speed up the calculation of KL divergence."""  
+    return _calculate_signed_kl(counts, totals, target_index=target_index, negatives=negatives)
+
+
 def score_keyness_per_bin(counts_df, statistics=("g",), bin_level=0, target_corpus="study",
                           nan=True, **kwargs):
     """Returns a DataFrame with keyness scores for each word, for each timebin.
@@ -403,7 +465,8 @@ def score_keyness_per_bin(counts_df, statistics=("g",), bin_level=0, target_corp
                corpora (word identity is the row index). Within each timebin, headers 
                are corpus names.
     statistics: tuple(str); the statistics to calculate as a measure of keyness.
-                Currently only "g" (signed G-statistic) is available)
+                Default is signed G ("g"), but signed KL divergence ("kl") is also
+                supported; to calculate both, provide statistics=("g", "kl")
     bin_level: int; the level of the multiindex that represents the timebins
     target_corpus: str; name of the corpus that is the study corpus (the input DF
                    has a column of counts with this name)
@@ -417,12 +480,14 @@ def score_keyness_per_bin(counts_df, statistics=("g",), bin_level=0, target_corp
     # Get DataFrame with keyness but no nonbin columns
     df_with_bin_keyness = (counts_df
                            .drop(nonbin_columns, axis=1)
-                           .groupby(level=bin_level, axis=1, sort=False)
+                           .T
+                           .groupby(level=bin_level, sort=False)
                            .apply(lambda df: 
                                   apply_binned(df, score_keyness, statistics=statistics, 
-                                               target_corpus=target_corpus, nan=nan, 
-                                               tidy_df=False, **kwargs)
+                                               target_corpus=target_corpus, nan=nan,
+                                               tidy_df=False, transpose=True, **kwargs)
                                  )
+                           .T
                           )
     
     # Add the nonbin columns back in
@@ -430,6 +495,37 @@ def score_keyness_per_bin(counts_df, statistics=("g",), bin_level=0, target_corp
     df_with_bin_keyness = df_with_bin_keyness.merge(nonbin_df, how="left", left_index=True, right_index=True)
 
     return df_with_bin_keyness
+
+
+def add_dispersions(counts_df, corpus_level=1, **kwargs):
+    """Adds columns that measure the dispersion of terms for each corpus."""
+    nonbin_columns = get_nonbin_columns(counts_df, **kwargs)
+    dispersions = (counts_df
+                   .drop(nonbin_columns, axis=1)
+                   .T
+                   .groupby(level=corpus_level, sort=False)
+                   .apply(lambda df: 
+                          apply_binned(df, calculate_dispersion, drop_level=corpus_level,
+                          transpose=True, **kwargs)
+                         )
+                    .T
+                  )
+    counts_df[[("dispersion", corpus) for corpus in dispersions.columns]] = dispersions
+
+
+def calculate_dispersion(target_df, **kwargs):
+    """Calculates the dispersion of a word across bins in a target corpus.
+    0 indicates a perfectly even distribution (following the expected probability
+    distribution of bin sizes), while values close to 1 indicate very uneven
+    distributions (clumping all of the occurrences of the word in one or a few
+    bins, especially if those bins are not particularly large relative to the
+    rest of the bins).
+    When a word does not occur at all in a corpus (across any bins), the dispersion
+    value reported is NaN (which shows up as a blank cell in the output CSV)
+    """
+    totals = tuple(target_df.sum(axis=0))
+    kl_divergence = target_df.apply(lambda row: calculate_keyness_statistic(row, totals, "kl", negatives=False, nan=True), axis=1)
+    return 1.0 - np.exp(-kl_divergence)
 
 
 def save_df(keyness_df, output_path, flatten=True, flat_col_sep=".", sort_by="keyness_g"):
@@ -469,8 +565,8 @@ def save_df(keyness_df, output_path, flatten=True, flat_col_sep=".", sort_by="ke
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "Calculate keyness scores for words from a CSV of \
-                                                    Tweets paired across study and reference corpora")
-    parser.add_argument("input_path", type=str, help="Path to the input CSV file of Tweets paired \
+                                     entries paired across study and reference corpora")
+    parser.add_argument("input_path", type=str, help="Path to the input CSV file of entries paired \
                         across a study and reference corpus")
     parser.add_argument("output_path", type=str, help="Path to the output CSV file")
     parser.add_argument("--corpus-names", type=str, nargs="+", default=["study", "reference"],
@@ -481,18 +577,18 @@ if __name__ == "__main__":
     parser.add_argument("--input-col-sep", type=str, default="_", help="The character that is used \
                         to separate prefixes (corpus names) from suffixes (types of information) in \
                         column headers in the input CSV")
-    parser.add_argument("--tweet-col-suffix", type=str, default="tweet.text", help="The suffix of \
-                        the column headers in the input CSV that designate Tweet text")
-    parser.add_argument("--time-col-suffix", type=str, default="tweet.created_at", help="The suffix \
-                        of the column headers in the input CSV that designate Tweet post times")
+    parser.add_argument("--text-col-suffix", type=str, default="text", help="The suffix of the column \
+                        in the input CSV that designates text")
+    parser.add_argument("--time-col-suffix", type=str, default="time", help="The suffix of the column \
+                        headers in the input CSV that designate entry creation timestamps")
     parser.add_argument("--label-column", type=str, default="label", help="The name of the column \
-                        in the input CSV that designates the label of a pair of Tweets (e.g. indicating \
+                        in the input CSV that designates the label of a pair of entries (e.g. indicating \
                         the level at which it is filtered out)")
-    parser.add_argument("--use-bins", dest="use_bins", action="store_true", help="Bin Tweets by time and \
+    parser.add_argument("--use-bins", dest="use_bins", action="store_true", help="Bin entries by time and \
                         calculate keyness within each bin, in addition to calculating keyness across the \
                         dataset as a whole")
     parser.add_argument("--bin-time-unit", dest="timebin_unit", type=str, default="months", help="The \
-                        unit of the time interval that is used to bin Tweets by time for keyness \
+                        unit of the time interval that is used to bin entries by time for keyness \
                         calculation (valid options: \"days\", \"weeks\", \"months\", \"years\"). Note: \
                         this does not refer to the timebins that were used for collecting the data, but \
                         rather the granularity of bins that will be used for analyzing keyness across time.")
@@ -503,13 +599,13 @@ if __name__ == "__main__":
                         across time.")
     parser.add_argument("--bin-formatting", dest="timebin_formatting", type=str, default=None, help="The \
                         string formatting code to represent bins as column names, using strftime format \
-                        codes; for example, %%Y_%%m would create bin names such as 2023_05 (for May 2023); see \
+                        codes; for example, %Y_%m would create bin names such as 2023_05 (for May 2023); see \
                         https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes \
                         for the list of codes. If this argument is not provided, bins are labeled by their \
                         full timestamp, with the prefix bin_")
-    parser.add_argument("--keep-labels", type=str, nargs="+", default=None, help="The labels of Tweets to \
-                        keep and use for the keyness analysis; paired Tweets with other labels in the input \
-                        CSV will be filtered out from the analysis. If no labels are provided, all Tweets \
+    parser.add_argument("--keep-labels", type=str, nargs="+", default=None, help="The labels of entries to \
+                        keep and use for the keyness analysis; paired entries with other labels in the input \
+                        CSV will be filtered out from the analysis. If no labels are provided, all entries \
                         are used in the analysis.")
     parser.add_argument("--exclude-terms-path", type=str, default=None, help="The path to a TXT file \
                         containing terms that are to be excluded from the keyness analysis (one per line). \
@@ -519,12 +615,21 @@ if __name__ == "__main__":
                         addition to performing a keyness analysis based on the number of times each word occurs \
                         in the study corpus relative to the reference corpus, also perform an analysis based \
                         on the number of timebins that the word occurs in")
+    parser.add_argument("--include-dispersions", dest="include_dispersions", action="store_true", help="Add columns \
+                        containing the dispersion of each word across bins of each corpus, where dispersion takes \
+                        into account probability distributions (the frequency of the word in each bin relative to \
+                        the total frequency of words in that bin) rather than just the number of bins")
     parser.add_argument("--no-signing", dest="negatives", action="store_false", help="Do not set the keyness \
                         statistic to be negative when the word is underrepresented in the study corpus relative \
                         to the reference corpus")
     parser.add_argument("--nan", dest="nan", action="store_true", help="Use numpy.nan for keyness when a word \
                         does not occur in either corpus (as opposed to 0.0, which is used if this flag is not \
                         provided)")
+    parser.add_argument("--keyness-statistics", dest="statistics", type=str, nargs="+", default=["g"], 
+                        help="The statistics to calculate as a measure of keyness. Options include g (signed G, \
+                        the classic measure and the default value) and kl (signed KL divergence). Multiple \
+                        values may be provided, separated by spaces; the statistic written first in this list \
+                        will be used to sort the results in the output CSV file.")
     
     args = parser.parse_args()
     
@@ -537,18 +642,21 @@ if __name__ == "__main__":
     
     # Get wordcount DataFrame
     counts_df = create_binned_wordcount_df(args.input_path, corpora=args.corpus_names, col_sep=args.input_col_sep,
-                                           tweet_col_suffix=args.tweet_col_suffix, use_bins=args.use_bins,
+                                           text_col_suffix=args.text_col_suffix, use_bins=args.use_bins,
                                            include_bin_counts=args.include_bin_counts, timebin_unit=args.timebin_unit,
                                            timebin_interval=args.timebin_interval, time_col_suffix=args.time_col_suffix,
                                            label_column=args.label_column, keep_labels=args.keep_labels,
-                                           exclude_terms=exclude_terms, timebin_formatting=args.timebin_formatting)
+                                           exclude_terms=exclude_terms, timebin_formatting=args.timebin_formatting,
+                                           include_dispersions=args.include_dispersions)
     
     # Get keyness statistics
     if args.use_bins:
-        keyness_df = score_keyness_per_bin(counts_df, target_corpus=args.target_corpus, nan=args.nan,
-                                           timebin_formatting=args.timebin_formatting)
+        keyness_df = score_keyness_per_bin(counts_df, statistics=args.statistics, target_corpus=args.target_corpus, 
+                                           nan=args.nan, timebin_formatting=args.timebin_formatting)
     else:
-        keyness_df = score_keyness(counts_df, target_corpus=args.target_corpus, tidy_df=False, nan=args.nan)
+        keyness_df = score_keyness(counts_df, statistics=args.statistics, target_corpus=args.target_corpus, 
+                                   tidy_df=False, nan=args.nan)
     
     # Save results to CSV
-    save_df(keyness_df, args.output_path)
+    sort_by = "keyness_" + args.statistics[0]
+    save_df(keyness_df, args.output_path, sort_by=sort_by)

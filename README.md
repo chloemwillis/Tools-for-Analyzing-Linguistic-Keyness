@@ -1,51 +1,67 @@
 # Tools for Analyzing Linguistic Keyness (TALK)
 
-Tools for Analyzing Linguistic Keyness or TALK is a public repository that contains a codebase for harvesting and analyzing language-based Twitter data using keyness analysis. 
+Tools for Analyzing Linguistic Keyness or TALK is a public repository that contains a codebase for (harvesting and) analyzing language-based Twitter data using keyness analysis.  
+***Note:** At the time that the codebase was developed, the Twitter (now X) API allowed researchers to harvest large volumes of Tweets for free. That is no longer the case, and we cannot guarantee that the code to harvest Tweets still works. As a result, the harvesting code and its documentation are not part of the core codebase, but rather can be found in the `archive` directory. The analysis codebase still works, and can be applied to any data (including from other platforms) as long as it is formatted correctly. This documentation describes the required format and proceeds to illustrate the use of the analysis codebase.*
 
-Keyness analysis is a statistical method used to identify words that characterize a study corpus relative to a reference corpus ([Baker 2004](https://journals.sagepub.com/doi/10.1177/0075424204269894); [Egbert & Biber 2019](https://www.euppublishing.com/doi/10.3366/cor.2019.0162); [Gabrielatos 2018](https://www.taylorfrancis.com/chapters/edit/10.4324/9781315179346-11/keyness-analysis-costas-gabrielatos?context=ubx&refId=c6b7218d-1181-4496-9950-c0585419a626); [Gries 2021](https://ricl.aelinco.es/index.php/ricl/article/view/150); [Rayson & Potts 2021](https://link.springer.com/chapter/10.1007/978-3-030-46216-1_6)). As such, a portion of this codebase is concerned with collecting, processing, and filtering Twitter data to form study and reference corpora. However, you do not need to work with Twitter data to use these code files; the general approach taken here can also be taken for data from any source, and the calculation of keyness (in `keyness.py`) can be directly applied to any CSV file that pairs study and reference texts in the designated format. Regardless of where your data comes from, we recommend reading through the Procedure and Detailed Steps sections below to understand the pipeline and procedure this repository is designed for.
+Keyness analysis is a statistical method used to identify words that characterize a study corpus relative to a reference corpus ([Baker 2004](https://journals.sagepub.com/doi/10.1177/0075424204269894); [Egbert & Biber 2019](https://www.euppublishing.com/doi/10.3366/cor.2019.0162); [Gabrielatos 2018](https://www.taylorfrancis.com/chapters/edit/10.4324/9781315179346-11/keyness-analysis-costas-gabrielatos?context=ubx&refId=c6b7218d-1181-4496-9950-c0585419a626); [Gries 2021](https://ricl.aelinco.es/index.php/ricl/article/view/150); [Rayson & Potts 2021](https://link.springer.com/chapter/10.1007/978-3-030-46216-1_6)). The archived part of this codebase is concerned with collecting, processing, and filtering Twitter data to form study and reference corpora. However, you do not need to work with Twitter data to use these code files; the same general approach can be taken for data from any source, and the calculation of keyness (in `keyness.py`) can be directly applied to any CSV file that pairs study and reference texts in the designated format. Regardless of where your data comes from, we recommend reading through the [Overview](#overview) and [Using the codebase](#using-the-codebase) sections below to understand the pipeline and procedure this repository is designed for.
 
-This codebase was developed in the process of doing research on how people talk about bisexuality on Twitter. Therefore, some of the code reflects what we needed for our use case (e.g. `stopwords.txt`), but these files are easily modified to fit your needs. The research project is still ongoing, so we will continue to update this repository as we write. We'll link our first paper on the subject soon -- stay tuned!
+We intend for this repository to be accessible to researchers regardless of technical background, i.e. we want our code to be easy to use for everyone. To that end, we focus on writing docstrings and comments with as little jargon as possible.  
 
-We intend for this repository to be accessible to researchers regardless of technical background, i.e. we want our code to be easy to use for everyone. To that end, we focus on writing doc strings and comments with as little jargon as possible. 
+## Table of contents
 
-## API authorization
+1. [Contents of the repository](#contents-of-the-repository)  
+2. [Dependencies and requirements](#dependencies-and-requirements)  
+3. [Overview](#overview)  
+4. [Using the codebase](#using-the-codebase)  
+   1. [Data format](#data-format)  
+   2. [Labelling entries for grouping and/or exlusion](#labelling-entries)  
+   3. [Pairing entries across corpora](#pairing-entries)  
+   4. [Calculating keyness](#calculating-keyness)  
+5. [Contributors](#contributors)  
 
-Users must be authorized to interact with Twitter's API. You'll need to have a developer account and create an app to get your own API token. Apply for API access through the [Twitter Development website](https://developer.twitter.com/en) to get your API access keys and create your own app.
+## Contents of the repository
 
-## Necessary tools
+The contents of this repository are as follows:  
+- `archive/`: directory containing code to harvest and filter Tweets  
+- `sample_data/`: directory containing data in the required format, to illustrate the codebase requirements and usage  
+   > *These data are fabricated, based on text generated by [CorporateLorem](https://corporatelorem.woblick.dev/)*  
+- `align_corpora.py`: code to pair entries across sample and reference corpora, within groups based on time and/or manual labels  
+- `count_timebins.py`: code to bin and count entries in the sample and reference corpora by time  
+  > *Note: this code is incorporated within `align_corpora.py`, so it does not have to be used directly unless you want to examine the distribution of data across time, e.g. to compare different criteria for binning entries by time.  
+- `count_words.py`: code to normalize and count words across entries in corpora  
+  > *Note: this code is incorporated within `keyness.py`, so it does not have to be used directly unless you want to obtain raw frequencies within each corpus independent of keyness scores.  
+- `keyness.py`: code to calculate keyness scores  
+- `LICENSE`: the MIT license governing use and redistribution of the contents of this repository  
+- `README.md`: this documentation file  
 
-Some of the code in this repository draws on the [NSFW Detection Machine Learning Model](https://github.com/GantMan/nsfw_model) and [Tweetbotornot](https://github.com/mkearney/tweetbotornot). You will need to install these tools from their respective GitHub repositories to classify images ([NSFW Detection Machine Learning Model](https://github.com/GantMan/nsfw_model)) and to classify users as bots ([Tweetbotornot](https://github.com/mkearney/tweetbotornot)). 
+## Dependencies and requirements
 
-Our codebase also makes use of <code>twarc2</code>. [Twarc2](https://twarc-project.readthedocs.io/en/latest/twarc2_en_us/#configure) is a Python library for archiving Twitter JSON data. You don't need to manually configure <code>twarc2</code> with your API access credentials to use our codebase (assuming you follow the procedure outlined below), but you will need to if you want to use the full range of what <code>twarc2</code> has to offer. Assuming you already have Python 3 installed (if not, click [here](https://www.python.org/downloads/)), you can install <code>twarc2</code> from the terminal using [pip](https://pip.pypa.io/en/stable/installation/) install: 
+The main (non-archived) part of this codebase uses the following modules that are not part of base Python:  
 
-<code>pip install --upgrade twarc</code>
+- pandas  
+- scipy  
+- numpy  
+- dateutil ([https://dateutil.readthedocs.io/en/stable/](https://dateutil.readthedocs.io/en/stable/))  
+- emoji ([https://pypi.org/project/emoji/](https://pypi.org/project/emoji/))  
 
-Mac users can also install <code>twarc</code> using [Homebrew](https://brew.sh/):
+If you use the [Anaconda distribution](https://www.anaconda.com/download) of Python, the first 3 of these modules will be installed automatically. The `dateutil` and `emoji` modules can be installed by entering the commands `conda install python-dateutil` and `conda install conda-forge::emoji` (if you are using Anaconda) or `pip install dateutil` and `pip install emoji` (if you are using a different Python distribution) in the Terminal.  
 
-<code>brew install twarc</code>
+## Overview
 
-Next you need to tell twarc what your API access credentials are and grant it access to to your App. Type <code>twarc2 configure</code> into the terminal and follow the prompts. First, it will ask for your Bearer Token. Then it will ask you `Add API keys and secrets for user mode authentication [y or n]?` -- type <code>y</code> into the terminal. Then enter your API Key and API Secret. Finally it will ask you whether you'd like to obtain your user keys by (1) generating access keys by visiting Twitter or (2) manually entering your access token and secret. Type <code>2</code> into the terminal and enter your Access Token and Access Token Secret. Now you're ready to use <code>twarc2</code> independent of this codebase.
+A keyness analysis requires two corpora: a study corpus and a reference corpus. The two corpora should be closely matched in every way except for their source or topic: the study corpus comes from the source or represents the topic for which you want to identify key terms, and the reference corpus is a collection of contemporaneous "everyday" language of the same type but not representing the target topic or source. For example, the analysis for which this codebase was developed aimed to understand the keywords associated with certain hashtags about bisexuality in Tweets, so the study corpus was composed of Tweets that contained those hashtags, and the reference corpus was composed of contemporaneous Tweets that did not contain those hashtags.
 
-## Procedure
+The general procedure for carrying out a keyness analysis is as follows:
 
-Assuming you want to construct two corpora (a study and a reference) for a comparative analysis (e.g. keyness or keywords analysis), we recommend you proceed through the following steps to create matching corpora. Depending on your use case or research question, you may want to tweak or skip the steps involving filtering Tweets based on some criteria.
+1. Obtain the study and reference corpus (e.g., our project harvested Tweets, using code in the archive directory)  
+2. (Optional) If you want to filter the data or analyze distinct subsets of the corpora (e.g., by applying filtering criteria of different stringencies), label the entries according to the filtering criteria and/or subset (e.g., our project filtered out users that were suspected of being bots and explored the repercussions of additionally filtering out Tweets that were sexually explicit, as illustrated in `archive/filtering.ipynb`)  
+3. Pair entries across the study and reference corpora, so that each study entry is matched with a reference entry both temporally and in terms of the labels applied in the previous step; this ensures that the corpora are closely matched in terms of their distribution of entries as well an in their general design (use `align_corpora.py`)  
+4. Calculate keyness (use `keyness.py`)  
 
-1. Configure your API settings, and create a `keys.json` file that stores your credentials  
-2. Configure your query (`query_config.json`) and search criteria (`study_terms.txt`; `study_exclusions.txt`)  
-3. Harvest the Tweets for the study corpus (`harvest_tweets.py`)  
-4. Harvest the Tweets for the reference corpus (`harvest_tweets.py`)  
-5. Label Tweets for exclusion, using your own criteria; this is a flexible process, but we have included several examples of exclusion criteria, and ways to convert those criteria into labels, in `filtering.ipynb`  
-6. Pair Tweets across the study and reference corpora (`align_corpora.py`)  
-7. Calculate keyness (`keyness.py`)  
+The main codebase in this repository, and the detailed documentation that follows, cover steps (3) and (4) of this procedure. For an illustration of steps (1) and (2) for our specific example of analyzing Tweets containing bisexuality-related hashtags, see the archive.
 
-There are some files in this repository that are incorporated into other files used in the pipeline above, but can also be run separately:  
-- `count_timebins.py` is used to bin Tweets by time posted, and count the number of Tweets per bin; it is necessary to bin and count the study Tweets in this way, in order to know the criteria for harvesting reference Tweets. This code is embedded in `harvest_tweets.py`, but can also be run separately, for example if you need to redefine the timebins that you originally defined when harvesting your study Tweets.  
-- `count_tweet_words.py` is used to normalize Tweets and extract individual words for counting. It is used in `keyness.py`, but can also be useful in the filtering process. to identify common words in the study corpus that seem to be drawn from a different domain than you intend (see `filtering.ipynb`).  
-- `extract_tweets.py` is used to convert the JSONL files created when harvesting Tweets into CSV format. It is embedded in `harvest_tweets.py`, but can also be run separately to extract additional/different fields to CSV from Tweets you have already harvested.  
+## Using the codebase
 
-In addition, the files `tweetbotornot.R` and `classify_images.py` are intended to be used separately for specific kinds of filtering (respectively, identifying bots and detecting sexually explicit images).
-
-## Detailed steps
+The following steps assume that you have already obtained a study and reference corpus that you wish to compare.  
 
 The files in this codebase are designed to be run through the terminal. What you write in the terminal will typically look something like this:
 
@@ -53,205 +69,185 @@ The files in this codebase are designed to be run through the terminal. What you
 python filename.py input_filepath output_filepath --optional-args
 ```
 
-Below, we describe the calls for files listed in the steps above, specifying the important arguments. More information, including about additional arguments and default values, can be obtained by calling each file with the `--help` option, as in:
+Python does not come pre-installed on Windows; if you are using Windows, we recommend that you install the [Anaconda distribution](https://www.anaconda.com/download) of Python, and then use the *Anaconda Powershell Prompt* as your designated terminal. On Mac, python can be accessed through the built-in terminal.
+
+In order for the terminal commands given here to work as intended, you should first ensure that your terminal is navigated to the location where the codebase is saved. For example, if you have saved the codebase to a folder called `TALK` that is on your Windows desktop (`C:/Users/yourname/Desktop/TALK`), you would enter the following command in the terminal:  
+```
+cd C:/Users/yourname/Desktop/TALK
+```
+where `yourname` is replaced by your username. 
+
+Below, we describe the calls for pairing entries across the study and reference corpora and calculating keyness, specifying the important arguments. More information, including about additional arguments and default values, can be obtained by calling the corresponding files with the `--help` option, as in:
 
 ```
-python filename.py --help
+python align_corpora.py --help
+python keyness.py --help
 ```
 
-### Step 1: Configure your API settings
+### Data Format
 
-First, you will need to [sign up for a Twitter developer account](https://developer.twitter.com/en/docs/twitter-api/getting-started/getting-access-to-the-twitter-api). You will need to have a Twitter account to sign up for a developer account. At the time of writing, there are [four levels](https://developer.twitter.com/en/docs/twitter-api/getting-started/about-twitter-api#v2-access-level) of API access (i.e. four types of developer accounts): Free, Basic, Pro, and Enterprise. For our project, we received Academic Access that allowed us to perform a full archive search of Twitter all the way back to 2006. Academic Access has since been deprecated and it is unclear if or when it will return. Full archive searches are now limited to Pro and Enterprise accounts.
+Our code assumes that your data are contained in two CSV files: one for the study corpus and one for the reference corpus. The first row of each CSV file should contain column headers. Each subsequent row should correspond to a unique text in the corpus (e.g., a unique Tweet, post, or comment). If you are analyzing longer documents such as articles, each row could correspond to an entire document or to part of a document such as a paragraph or sentence, depending on the criteria by which you intend to pair study and reference entries. For example, if you want to pair entire documents, such that the study and reference corpora represent the same number of documents (paired by time of creation) *but may represent different numbers of sentences*, then each row should correspond to an entire document; if you want to pair sentences, such that the study and reference corpora represent the same number of sentences (paired by the time of creation of the documents they are contained in) *but may represent different numbers of documents*, then each row should correspond to a single sentence. This is a design decision that is yours to make; the code will work regardless. The sample files in the `sample_data/` directory have each row represent a single paragraph. 
 
-During the sign-up process, you will create a Project and an associated developer App. A Project is like a container for an App that has a specific purpose. Once you have a developer app, you will be able to find or generate the following **credentials**: 
+The following columns are used in our code (see the files in `sample_data/` for demonstrations):  
 
-* API Key and Secret (aka Consumer Key and Secret): Essentially the username and password for your app
-* Access Token and Secret: Credentials that represent requests made on behalf of the user who owns the App
-* App only Access Token (aka Bearer Token): Credential used for making requests to endpoints that respond with information publically available on Twitter
+- a column containing the text of the entry (Tweet, post, comment, sentence, paragraph, document, etc.). By default, the code assumes the column is named `text`, but if your column is named differently then this can be provided as an argument when using the relevant scripts.  
+- (optional) a column containing the timestamp at which the entry was created, in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format (e.g., *2020-03-28T17:57:45.000Z*, which represents 45 seconds after 5:57pm UTC on March 28, 2020). By default, the code assumes the column is named `time`, but if your column is named differently then this can be provided as an argument when using the relevant scripts.  
+- (optional) a column containing the label for the entry (used e.g. for excluding entries, performing subset analyses, or gaining finer control over the pairing of entries). By default, the code assumes the column is named `label`, but if your column is named differently then this can be provided as an argument when using the relevant scripts.  
 
-**Don't lose these credentials.** Keep them secret, keep them safe. They are essential for making requests to harvest data from Twitter. 
+The names of columns must be identical across the study and reference corpora.
 
-Once you have set up your API access and located your credentials, you should save these credentials to a JSON file so that they can be read in by this codebase. You can create a JSON file using a plain text editor (like Notepad in Windows or TextEdit in Mac; not Microsoft Word or similar editors that let you change font, size, etc.). Create a new text file and save it in the directory of this codebase, with a filename like `keys.json`. The contents of the file should look as follows:
+We assume in what follows that you already have the text and (if relevant) time columns. The next step discusses the creation of labels.  
 
+### Labelling entries for grouping and/or exlusion
+
+Entries in each corpus can optionally be given a *label* that assigns them to a group. When pairing entries across corpora, members of a pair will be from the same group wherever possible. The calculation of keyness scores can be restricted to entries from particular groups. In this way, labelling can be used:  
+
+- to exclude certain entries from the analysis;  
+- to provide fine-grained control of possible pairings of study and reference entries;  
+- to filter the data into subsets for separate analysis, at levels of a filtering hierarchy.
+
+The notebook `archive/filtering.ipynb` illustrates how we used labelling to perform subset analyses of user-filtered and Tweet-filtered data in our investigation, with the hierarchy of labels *user-excluded*, *tweet-excluded*, and *included*. Study and reference Tweets were paired within groups defined by these labels, with surplus reference Tweets permitted to backfill only for study Tweets of a stricter label. For example, for study Tweets labeled as *tweet-excluded*, as many as possbile were paired with reference Tweets that were also labeled as *tweet-excluded*. If there weren't enough reference Tweets labeled as *tweet-excluded* for all of the study Tweets labeled as *tweet-excluded*, then the reference set expanded to include reference Tweets labeled as *included* (but not reference Tweets labeled as *user-excluded*). In this way, as many study Tweets of each group were paired with a reference Tweet as possible, while preserving the requirement that filtering out study tweets labeled as *user-excluded* should also filter out all reference Tweets labeled as *user-excluded*. We used these labels to separately analyze:  
+1. everything that was not *user-excluded* (e.g., from a bot); this means we pooled the *tweet-excluded* and *included* groups;  
+2. everything that was not *user-excluded* or *tweet-excluded* (e.g., porn); this means we analyzed only the *included* group.
+
+The sample data in `sample_data/` illustrates a general labeling scheme that can be used for fine-grained matching and filtering, where entries are labeled either as *included*, *excluded*, or *questionable*. This scheme allows the analysis to pair study and reference tweets by inclusion status as closely as possible, and then either:  
+1. only analyze study and reference entries that are both labeled as *included*;  
+2. only analyze study entries that are labeled as *included* but allow their matched reference entries to be labeled as either *included* or (if a match with an *included* reference is not possible) *questionable*;  
+3. analyze study and reference entries that are labeled as either *included* or *questionable*, where neither entry in a pair can be labeled as *excluded*.  
+
+To label entries, simply add a `label` column to the study and reference CSVs, where the value in that column for each row is the label of the corresponding entry. Labelling is not required; you can proceed with the analysis with unlabelled CSVs.
+
+### Pairing entries across corpora
+
+The entries study and reference corpora need to be paired with each other to ensure that they are as comparable to each other as possible. This pairing can be based on the time of creation and/or label of the entry (if present), or it can be completely open. For maximal control, we recommend pairing by time (at least) whenever possible.
+
+To pair entries across corpora, use the script `align_corpora.py`. By default, this script assumes that the data will be paired by time (contained in a column `time`) and label (contained in a column `label`), where a study and reference entry can be paired only if their creation times fall within the same 1-hour bin and they have the same label. In this default situation, it can be used as follows (where `sample_data/study.csv` and `sample_data/reference.csv` can be changed to the paths to your study and reference files, and `sample_data/paired.csv` can be changed to the path to the output file you'd like to create):
 ```
-{
-    "consumer_key": "PASTE YOUR CONSUMER KEY BETWEEN THESE QUOTATION MARKS",
-    "consumer_secret": "PASTE YOUR CONSUMER SECRET KEY BETWEEN THESE QUOTATION MARKS",
-    "access_token": "PASTE YOUR ACCESS TOKEN BETWEEN THESE QUOTATION MARKS",
-    "access_token_secret": "PASTE YOUR ACCESS TOKEN SECRET KEY BETWEEN THESE QUOTATION MARKS",
-    "bearer_token": "PASTE YOUR BEARER TOKEN BETWEEN THESE QUOTATION MARKS"
-}
-```
-
-### Step 2: Configure your query and search criteria
-
-The file `query_config.json` contains the settings that will be applied to your searches for both the study and reference corpus. The settings used for our search are as follows:
-
-```
-{
-  "query": "lang:en -is:retweet -is:quote",
-  "expansions": "author_id,geo.place_id,referenced_tweets.id,referenced_tweets.id.author_id,attachments.media_keys",
-  "user_fields": "created_at,description,id,location,name,protected,public_metrics,username",
-  "place_fields": "full_name,id,country,geo,place_type",
-  "tweet_fields": "id,text,attachments,author_id,conversation_id,created_at,entities,lang,public_metrics,referenced_tweets",
-  "media_fields": "media_key,type,url,public_metrics,alt_text"
-}
-```
-
-The `query` field in this file defines aspects that will be added to the query for all Twitter searches. In this case, it specifies the language (English) and excludes retweets and quotes. Any [standard query operators](https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query) for the Twitter API can be used here. Each search will also have its own terms it is looking for or avoiding, as described for `study_terms.txt` and `study_exclusions.txt` below.
-
-The `expansions` field in this file designates the kinds of information that will be harvested in addition to the Tweets themselves. In our case, this includes information about the user who posted the Tweet, the location where they posted it from, any Tweets they reference and the authors of those Tweets, and media (e.g. images) that are attached to the Tweet. This set of expansions is fairly extensive: a keyness analysis does not *need* all (or perhaps even any!) of this information, but obtaining this information means it can be used for nuanced filtering (e.g. based on user characteristics or image properties) and detailed further analysis. See the [Twitter API documentation](https://developer.twitter.com/en/docs/twitter-api/expansions) for additional expansions that can be requested.
-
-The `user_fields`, `place_fields`, `tweet_fields`, and `media_fields` fields in this file designate the specific details that will be harvested for each expansion. The fields listed here should cover the vast majority of analyses you might want to perform. See the [Twitter API documentation](https://developer.twitter.com/en/docs/twitter-api/fields) for information about these fields, and additional fields that can be requested.
-
-The file `study_terms.txt` contains the query terms that will be used to search for the study Tweets, with one term per line. Each Tweet in the study corpus will be required to contain *at least one* of these terms. Search terms can be words, hashtags, emoji, etc. Multi-word search terms such as *happy birthday* can be used; just put *happy birthday* on its own line, with a space between the words. For our study, the search terms were the following hashtags:
-
-```
-#bi
-#bipride
-#bisexuality
-#bisexualpride
-#bisexuals
-#bivisibilityday
-#biweek
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv
 ```
 
-The file `study_exclusions.txt` contains terms that *must not* be included in any study Tweets, also written one per line. These can be used to narrow down searches by excluding unwanted domains; for example, we noticed that the term *#bi* was found in a lot of Tweets about Business Intelligence or the rapper B.I, so we manually curated a list of terms that were characteristic of such domains in an attempt to exclude them from our data. Our exclusions were as follows:
+The output of `align_corpora.py` is a CSV file that combines all the information from the study and reference CSVs. The text and time columns are copied from each file, with prefixes `study_` and `reference_` to designate the source of the information. Each row no longer represents a single entry, but rather a *pair* of entries that are matched by timebin and label. A new `pair_id` column contains a unique ID for each pair of entries, and (if matching is conducted by label) a `label` column indicates the label of the pair (which is taken from the label of the study entry).
 
+The constraints on pairing can be loosened by providing optional arguments to the script.
+
+One way of loosening constraints is to widen the time bins under consideration. With the default 1-hour bins, a study and reference entry can only be paired with each other if they are created in the same hour (e.g., both between 5:00:00pm and 5:59:59pm). If there are more study entries within any given time bin (with a given label) than there are reference entries in that time bin (with the same label), the surplus study entries that cannot be paired with a reference are discarded. Widening the time bins helps to avoid quirks of sampling whereby there are more study entries than reference entries in one bin and fewer in the next; larger time bins will be more likely to have a consistent size (note that time bins are non-overlapping). The size of the time bins is controlled by two optional arguments:  
+- `--timebin-unit UNIT_STRING`: whether the time bins are measured in days (`--timebin-unit days`), hours (`--timebin-unit hours`), minutes (`--timebin-unit minutes`) or seconds (`--timebin-unit seconds`)  
+- `--timebin-interval INTERVAL_INTEGER`: the size of the time bins in the unit given above; this must be an integer and cannot mix units.  
+
+The allowable time bin units are small (days or shorter) by design: the goal of binning by time when pairing entries is to ensure that pairs are sensitive to timezone (which is correlated with location and thus language variety) and/or topical news events (which may see a peak in discussion activity a few days around their time of occurrence).
+
+For example, to pair study and reference entries within time bins of 30 days, the following command would be used (note that each optional argument is written after the corresponding option flag, separated by a space):  
 ```
-#powerbi
-#businessintelligence
-#businessanalytics
-#analysis
-#analytics
-#microsoft
-Microsoft
-query
-analytics
-analysis
-hanbin
-#hanbin
-@shxx131bi131
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv --timebin-unit days --timebin-interval 30
 ```
 
-### Step 3: Harvest the Tweets for the study corpus
-
-To harvest study Tweets, use the `harvest_tweets.py` file. You'll write something like the following in the Terminal:
-
+Considerations of time can also be removed entirely, to allow each study entry to be paired with a unique reference entry with the same label (regardless of when it was created). **This is required if your input CSV files do not have a column for the time at which entries were created.** For this, you would provide the optional argument `--no-timebins`, as in:  
 ```
-python harvest_tweets.py [OPTIONAL-CORE-ARGS] study study_terms.txt [OPTIONAL-STUDY-ARGS]
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv --no-timebins
 ```
 
-In this and all following Terminal code descriptions, square brackets [] indicate things that are *optional* and CAPITAL LETTERS indicate things that you should replace with appropriate values.
-
-The *optional core args* let you change aspects of harvesting that are common to both the study and reference corpus. The arguments are as follows:  
-- `--dir PATH/TO/DIRECTORY`; the path to the directory where the input files are located, and in which the output files will be created (defaults to the same directory as the script)  
-- `--config QUERY_CONFIG.JSON`; the name of the query config file (defaults to `query_config.json`)  
-- `--keys KEYS.JSON`; the name of the file containing your API authentication keys  
-- `--csv-fields FIELD_1 FIELD_2 FIELD_3...`; the names of the fields you want to extract from the harvested Twitter data and save to CSV. Multiple fields can be provided, separated by spaces. The naming convention follows the field names from the [Twitter API documentation](https://developer.twitter.com/en/docs/twitter-api/fields), and are such that:  
-    - fields that are about the Tweet start with `tweet.`,  
-    - fields that are about the user start with `user.`,  
-    - fields that are about the location start with `place.`,  
-    - fields that are about the Tweet to which this Tweet is a reply start with `reply.`, and  
-    - fields that are about media attached to the Tweet start with `tweet.media_`.  
-  For example, the default fields are `tweet.id user.username tweet.created_at tweet.text`, which will extract a unique ID for the Tweet, the username of the author, the timestamp at which the Tweet was posted, and the Tweet text. 
-
-After entering any optional core args that you want to have non-default values, the word `study` must be provided in order to tell the script that you will be harvesting study Tweets. Then, you must indicate the name of the file that contains the terms that will be used to identify study Tweets (`study_terms.txt`).
-
-The *optional study args* are specific to harvesting study Tweets. Notable optional arguments are as follows:  
-- `--exclude-terms STUDY_EXCLUSIONS.TXT`; the name of the file containing the terms that must not be included in any study Tweets (if you do not provide this argument, no terms will be excluded)  
-- `--start-date YYYY-MM-DD`; the earliest date from which Tweets should be harvested (if you do not provide this argument, Tweets will only be harvested from the past 30 days)  
-- `--end-date YYYY-MM-DD`; the latest date from which Tweets should be harvested; note this is EXCLUSIVE, so that e.g. `2023-06-01` harvests Tweets from *before* June 2023, but *not on June 1* (if you do not provide this argument, Tweets will be harvested up until the present day)  
-- `--max-tweets NUMBER`; the maximum number of Tweets to harvest, which is based on your API access limitations. The default is 10000000 (10 million), which was previously the limit for academic access to the Twitter API; at present, limits are substantially lower  
-- `--filename-stem STUDY`; the part that will go before `.jsonl` (raw Tweets data) and `.csv` (processed Tweet data) in the output files that are created (default is `study`)  
-
-When harvesting the study Tweets, they are binned by hour by default, such that the same number of Tweets in each hour-bin is requested when harvesting the reference corpus. This binning creates a file `timebin_counts_study.json` (where `study` is replaced by whatever you may have entered for the `--filename-stem` argument). To change the definition of time bins while harvesting the study corpus, use the arguments `--timebin-unit` and `--timebin-interval` (see `python harvest.py study --help`). If you want to change the definition of time bins after harvesting the study corpus (but before harvesting the reference corpus), use `count_timebins.py`.  
-
-The crucial output of harvesting study Tweets is a CSV file containing the Tweets (by default, `study.csv`)
-
-### Step 4: Harvest the Tweets for the reference corpus
-
-To harvest reference Tweets, use `harvest_tweets.py` again, this time via a call like:
-
+Another way of loosening constraints is to allow pairing across labels. With the default settings, a study and reference entry can only be paired with each other if they both have the same label (e.g., if they are both labeled as *included*). If there are more study entries with a given label (within a given time bin) than there are reference entries with that label (within the same time bin), the surplus study entries that cannot be paired with a reference are discarded. Allowing pairing across labels avoids this issue by considering reference entries with alternative labels when there are no more available with the required label (note that the label reported in the output CSV file still corresponds to the study entry, even if it is paired with a reference entry with an alternative label). The set of alternative labels is defined by a hierarchy; for example, the *included* reference label could be an alternative for the *questionable* and *excluded* study labels, while the *questionable* reference label could be an alternative only for the *excluded* study label and *excluded* reference label could never be an alternative for any study label (other than *reference* itself). A label hierarchy can be provided through the optional argument `--label-hierarchy LABEL_STRINGS`, where the labels are written in order from most available as alternative to least available as alternative, separated by spaces. For the example described above, the command would be:  
 ```
-python harvest_tweets.py [OPTIONAL-CORE-ARGS] reference study_terms.txt [OPTIONAL-REFERENCE-ARGS]
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv --label-hierarchy included questionable excluded
 ```
 
-The same *optional core args* should be used here as when harvesting the study Tweets.
-
-The *optional reference args* are specific to harvesting reference Tweets. Notable optional arguments are as follows:  
-- `--timebin-counts TIMEBIN_COUNTS_STUDY.JSON`; name of the file that contains the counts of study Tweets in each time bin (the default value, `timebin_counts_study.json`, will be fine as long as you didn't change `--filename-stem` when harvesting the study Tweets)  
-- `--count-multiplier NUMBER`; a multiplier that indicates the scaling factor of the reference corpus relative to the study corpus; the default value of `1.25` means that 25% extra reference Tweets will be harvested in each time bin, in order to ensure that there are enough reference Tweets to pair with study Tweets after filtering  
-- `--filename-stem REFERENCE`; the part that will go before `.jsonl` (raw Tweets data) and `.csv` (processed Tweet data) in the output files that are created (default is `reference`)  
-
-The crucial output of harvesting reference Tweets is a CSV file containing the Tweets (by default, `reference.csv`)
-
-### Step 5: Label Tweets for exclusion
-
-Tweets in each corpus can optionally be given a *label* that assigns them to a group. When pairing Tweets across corpora, members of a pair will be from the same group wherever possible. The calculation of keyness scores can be restricted to Tweets from particular groups. In this way, labelling can be used to filter the data, at levels of a filtering hierarchy.
-
-The notebook `filtering.ipynb` illustrates how labelling for user- and Tweet-based filtering might work.
-
-If you want to label Tweets, you can do so by adding a `label` column to the Tweet CSVs, and entering the labels for each Tweet in that column. In our `filtering.ipynb` file, the labeled CSVs are saved as `study_labeled.csv` and `reference_labeled.csv`.
-
-Labelling is not required; you can proceed with the analysis with unlabelled Tweet CSVs.
-
-### Step 6: Pair Tweets across the study and reference corpora
-
-Once the study and reference Tweets are harvested, they need to be paired with each other by timebin and (if labeled) group. This ensures that they are as comparable to each other as possible.
-
-To pair Tweets across corpora, use the file `align_corpora.py`. With unlabeled data, this would look something like:
-
+Considerations of label can also be removed entirely, to allow each study entry to be paired with a unique reference entry in the same time bin (regardless of their labels). **This is required if your input CSV files do not have a column for the label of each entry.** For this, you would provide the optional argument `--unlabeled`, as in:  
 ```
-python align_corpora.py study.csv reference.csv paired.csv --unlabeled [OPTIONAL-ARGS]
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv --unlabeled
 ```
 
-In this case, the only *optional args* that may be of interest are those that relate to the definition of timebins; if the timebins were changed from the default (1 hour) when harvesting the reference Tweets, you should provide those same definitions here through the `--timebin-unit` and `--timebin-interval` arguments. For full details, see `python align_corpora.py --help`.
+If your time and label columns are named something other than the `time`, and `label`, you can use the following optional arguments to provide those names:  
+- `--time-column TIME_STRING`: the name of the column containing the entry timestamps;  
+- `--label-column LABEL_STRING`: the name of the column containing the entry label.  
 
-With labeled data, it would look something like:
-
+In addition, the `--id-column ID_STRING` argument can be provided to change the name of the pair ID column in the output CSV from its default, `pair_id`. For example, if the names of the time and label columns in the input files were `tweet.created_at` and `tweet.label`, and the desired name of the pair ID column in the output CSV was `pair.id`, this information could be provided as follows:  
 ```
-python align_corpora.py study_labeled.csv reference_labeled.csv paired.csv [OPTIONAL-ARGS]
-```
-
-In this case, *optional args* of interest include the following:  
-- `--label-column LABEL`; the name of the column where Tweet labels are stored (defaults to `label`)  
-- `--label-hierarchy STRICTEST_LABEL LESS_STRICT_LABEL EVEN_LESS_STRICT_LABEL...`; if surplus reference Tweets from one group are allowed to backfill for another in case there aren't enough reference Tweets in that group, this argument specifies the hierarchy through which this backfilling is explored: Tweets with a stricter label are allowed to backfill for Tweets with a less strict label, but not vice versa. For example, our analysis assigns labels based on the level at which Tweets would be filtered out: `user-excluded` Tweets would be filtered out at the first level of filtering, `tweet-excluded` Tweets would be filtered out at the second level of filtering, and `included` Tweets would be retained through all levels of filtering; this means that the `included` label is the strictest one to apply, `tweet-excluded` is less strict, and `user-excluded` is the least strict. By providing the argument `--label-hierarchy included tweet-excluded user-excluded`, we pair `included` Tweets that survive all levels of filtering first, and if there are leftover reference Tweets, we allow them to be considered as backfill for pairing with `tweet-excluded` study Tweets that would be filtered out at the second level of filtering if there are not enough `tweet-excluded` reference Tweets. If Tweets are labeled into groups but the `--label-hierarchy` argument is not provided, no backfilling is permitted: study Tweets can *only* be paired with reference Tweets with the same label. This means that, if there aren't enough reference Tweets, some of the study Tweets are omitted from the paired dataset.
-
-The output of `align_corpora.py` is a CSV file that combines all the information from the study and reference CSVs. The columns are copied from each file, with prefixes `study_` and `reference_` to designate the source of the information. Each row is no longer a single Tweet, but rather a *pair* of Tweets that are matched by timebin (and, if required, by label). A new `pair_id` column contains a unique ID for each pair of Tweets, and (if matching is conducted by group) a `label` column indicates which group the pair belongs to.
-
-### Step 7: Calculate keyness
-
-Once you have a CSV file that pairs each study Tweet with a reference Tweet, the file `keyness.py` can be used to calculate keyness scores for words in these corpora. Basic usage is as follows, assuming the input CSV file is `paired.csv`:
-
-```
-python keyness.py paired.csv keyness.csv [OPTIONAL-ARGS]
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv --time-column tweet.created_at --label-column tweet.label --id-column pair.id
 ```
 
-The following *optional args* can be used to adjust the data that is included in the keyness analysis:  
-- `--keep-labels LABEL_1 LABEL_2...`; labels of Tweet pairs that are to be kept for inclusion in the calculation (if no labels are provided, all Tweets are kept). This can be used to perform keyness analysis with different groups of data filtered out; for example, with our labels, `--keep-labels included tweet-excluded` filters out Tweet pairs with the `user-excluded` label (yielding what we call the "user-filtered analysis"), while `--keep-labels included` also filters out Tweet pairs with the `tweet-excluded` label (yielding what we call the "tweet-filtered analysis").  
-- `--exclude-terms-path STUDY_TERMS.TXT`; path to a file containing words that should not be included in the keyness analysis, such as the query terms that were originally used to harvest the Tweets (because they are each included in a lot of study Tweets but no reference Tweets, so will be highly key by definition). Each term to exclude should be written on a separate line of this file. Note that excluding terms from the analysis in this way is highly preferable to conducting the analysis with them included and then deleting their keyness scores, because it prevents their counts from influencing the keyness scores of other terms.
+`align_corpora.py` pairs study and reference entries randomly (subject to the constraints of time and label). By default, it uses a random seed of 0 to ensure that the results are the same each time it is run. If you want to get different possible pairings on different runs, you can provide an alternative random seed on each run through the optional argument `--seed SEED_INTEGER`, as in:
+```
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv --seed 42
+```
 
-By default, the keyness analysis is conducted over the entire corpora. It can additionally be conducted over *bins* of the corpus, defined by time; for example, a separate keyness analysis can be conducted over the Tweets occuring in each month that the corpora span. The following additional *optional args* control aspects of this bin-based analysis:  
-- `--use-bins`; provide this flag in order to conduct the keyness analysis over bins, as well as over the entire dataset  
-- `--bin-time-unit UNIT`; the time unit over which bins are defined. Valid options are `days`, `weeks`, `months`, `years` (note the plural `s` on the end of each one!). Defaults to `months`  
-- `--bin-time-interval NUMBER`; the number of time-units within each bin (defaults to `1`). For example, `--bin-time-interval 3` alongside `--bin-time-unit months` would conduct a keyness analysis for the data split into 3-month bins.  
-- `--bin-formatting STRFTIME_CODE`; can be used to format the bin names as they appear in the resultant CSV file, using [strftime format codes](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes); for example, `--bin-formatting %Y_%m` would create bins with names like `2023_05` (for May 2023; for longer bins, the name indicates the start of the bin). If this argument is not provided, bin names default to `bin_` followed by the timestamp of the start of the bin.  
-- `--include-bin-counts`; if this flag is provided, in addition to conducting a keyness analysis across the overall corpora based on the frequency of each word, an analysis will also be conducted based on the *number* of bins within with each word occurs.
+Any of the optional arguments described here can be combined with each other. For example, to use 30-day time bins and a label hierarchy, you would use the following command:  
+```
+python align_corpora.py sample_data/study.csv sample_data/reference.csv sample_data/paired.csv --timebin-unit days --timebin-interval 30 --label-hierarchy included questionable excluded
+```
 
-Since `keyness.py` is designed to work for any data that pairs text from a study corpus with text from a reference corpus, it has multiple options for specifying the format of the input data. See `python keyness.py --help` for more information.
+### Calculating keyness
 
-The output CSV will have the following columns:  
-- `word`  
-- `keyness_g`: the keyness score of the word, with positive keyness scores indicating more-than-expected occurrences in the study corpus, and negative keyness scores indicating fewer-than-expected occurences in the study corpus  
+Once you have a CSV file that pairs each study entry with a reference entry, the script `keyness.py` can be used to calculate keyness scores for words in these corpora. Basic usage is as follows, assuming the input CSV file is `sample_data/paired.csv` and the output file you wish to create is `sample_data/keyness.csv`:  
+```
+python keyness.py sample_data/paired.csv sample_data/keyness.csv
+```
+
+The output is a CSV file in which each row represents a unique word that occurs in at least one corpus, with the following columns:  
+- `word`: the word  
 - `study`: the count of the word in the study corpus  
 - `reference`: the count of the word in the reference corpus  
+- `keyness_g`: the keyness score of the word, with positive keyness scores indicating more-than-expected occurrences in the study corpus, and negative keyness scores indicating fewer-than-expected occurences in the study corpus  
 
-If the analysis is conducted by time-based bins, there will be one copy of each of the `keyness_g`, `study`, and `reference` columns for each bin, prefixed by the bin name, and one for the overall corpora, prefixed by `overall_count`.
+The output CSV file is sorted such that words with the highest positive keyness scores (indicating strongest association with the study corpus over the reference corpus) appear at the top and words with the highest negative keyness scores (indicating strongest association with the reference corpus over the study corpus) appear at the bottom. Words with keyness scores near zero appear in the middle of the file and are not strongly associated with one corpus over the over.
 
-## Cite
+The default keyness statistic used for the analysis is the signed G-statistic, which is the classic measure used in this analysis. As an alternative measure, the code also supports the calculation of keyness statistics based on signed KL-divergence (see [Gries 2021](https://ricl.aelinco.es/index.php/ricl/article/view/150)). The KL-divergence can be calculated instead of the G-statistic through the use of the `--keyness-statistics` optional argument, as follows:  
+```
+python keyness.py sample_data/paired.csv sample_data/keyness.csv --keyness-statistics kl
+```
+The code also supports the calculation of both the G-statistic and KL-divergence together, by providing both as arguments (separated by spaces):  
+```
+python keyness.py sample_data/paired.csv sample_data/keyness.csv --keyness-statistics g kl
+```
+When both statistics are provided as arguments, the results in the output CSV will be sorted according to the first statistic listed.  
 
-DOI coming soon!
+By default, the keyness analysis is conducted over all pairs of entries appearing in the input file. In this way, even if the pairing of entries has been constrained by time or label, all of the entries that were successfully paired will be considered in the analysis. It is also possible to conduct separate keywords analyses over subsets of the pairs in the input file, where subsets are defined by time and/or label.
+
+Conducting separate analyses over subsets defined by time can be useful for tracking how the composition of key words changes over time (for example, for each month represented in the data). To do this, use the following optional arguments:  
+- `--use-bins`: provide this flag in order to conduct the keyness analysis over bins, as well as over the entire dataset  
+- `--bin-time-unit UNIT_STRING`: whether the time bins are measured in days (`--bin-time-unit days`), weeks (`--bin-time-unit weeks`), months (`--bin-time-unit months`) or years (`--bin-time-unit years`). Defaults to `months`.  
+- `--bin-time-interval INTERVAL_INTEGER`: the number of time-units within each bin (defaults to `1`). *Note: when the unit is months, the interval must be a divisor of 12 (i.e., must be 1, 2, 3, 4, or 6)*  
+- `--bin-formatting STRFTIME_CODE`: can be used to format the bin names as they appear in the resultant CSV file, using [strftime format codes](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes); for example, `--bin-formatting %Y_%m` would create bins with names like `2023_05` (for May 2023; for longer bins, the name indicates the start of the bin). If this argument is not provided, bin names default to `bin_` followed by the timestamp of the start of the bin.  
+
+Note that the time bins used for subset analyses do not have to match the time bins used to pair entries across corpora. The allowable time bin units for the subset analysis are large (days or longer) by design: the goal of binning by time when performing the keyness analysis is to see how keywords change at a gross level. If the time bins are too small, there will be many keyness scores and they will reflect quirks of sampling (random chance) moreso than meaningful differences.  
+
+For example, to conduct a keyness analysis over 1-year periods represented in the data (as well as over the data as a whole), you would use the following command:
+```
+python keyness.py sample_data/paired.csv sample_data/keyness_binned.csv --use-bins --bin-time-unit years --bin-time-interval 1 --bin-formatting %Y
+```  
+In the output CSV, there are now columns reporting study count, reference count, and keyness for *each* time bin, as well as for the overall corpora. These columns have a prefix indicating which temporal slice of the data they represent; for example, `2020.study` represents the number of times a word was used in the study corpus in entries from 2020, and `overall_count.keyness_g` represents the keyness score calculated for the overall corpora (across all time bins).
+
+When calculating keyness over subsets defined by time, it is likely that some words will simply not occur in either corpus in the given time period, due to quirks of sampling. By default, the keyness score reported for such words is 0. If you would like to distinguish such cases from "true" keyness scores of 0 -- where the word occurs in both corpora, equally often -- then the optional argument `--nan` can be provided. This causes no keyness score to be reported (i.e., a blank cell) for cases where the word does not occur in either corpus.
+
+In addition to calculating keyness over separate time bins, it is possible to count the number of time bins that each word occurs in each corpus (at least once) and use this as the basis of overall keyness calculations. This represents a *time-dispersion* keyness score: a word gets a higher score the more equally it is dispersed throughout time in the study corpus relative to the reference corpus (e.g., if it occurs in every time bin in the study corpus, but all instances of it in the reference corpus are concentrated within a single time bin). The time-dispersion keyness score is an alternative to the overall count-based keyness score. To report time-dispersion keyness scores in addition to count-based keyness scores, use the optional arguments described above to define time bins and add the optional argument `--include-bin-counts`, as in the following:
+```
+python keyness.py sample_data/paired.csv sample_data/keyness_binned.csv --use-bins --bin-time-unit years --bin-time-interval 1 --bin-formatting %Y --include-bin-counts
+```  
+This adds 3 new columns to the output CSV file: `bin_count.study`, which represents the number of time bins for which the word occurs in the study corpus; `bin_count.reference`, which represents the number of time bins for which the word occurs in the reference corpus; and `bin_count.keyness_g`, which represents the time-dispersion keyness scores.
+
+Conducting separate analyses over subsets defined by label can be useful for exploring the influence of filtering out groups of entries (e.g., due to inclusion criteria of different strictnesses). The code is set up to use labels to *filter* the output, so the way to conduct separate analyses based on label is to run the code several times to create different output files, each with different label-based filtering applied. Label-based filtering is applied through the optional argument `--keep_labels LABEL1_STRING LABEL2_STRING ...`, which defines the set of labels of entry pairs that are to be kept for inclusion in the calculation (each label to be included is written out, separated by a space). For example, to perform an analysis over only the entry pairs labeled as *included* or *questionable*, you would use the command:  
+```
+python keyness.py sample_data/paired.csv sample_data/keyness_included-questionable.csv --keep-labels included questionable
+```  
+and to perform an analysis over only the entry pairs labeled as *included*, you would use the command:  
+```
+python keyness.py sample_data/paired.csv sample_data/keyness_included.csv --keep-labels included
+```  
+These analyses could be compared with each other, and with the default analysis over all entry pairs (regardless of label), to explore the influence of different inclusion criteria; in the analysis of Tweets related to bisexuality described in the archive, we do this to explore the influence of including or excluding pornographic messages on the set of keywords identified.
+
+In addition, it is possible to exclude terms from the results. For example this could be used to remove query terms that were used to identify study entries in the first place (which, by design, are assumed to be key) or to remove stopwords (such as *a* and *the*) that are unlikely to be meaningful to the analysis but which might otherwise emerge as key because their high frequency causes small asymmetries in counts to have large influences on keyness scores. Note that excluding terms from the analysis in this way is highly preferable to conducting the analysis with them included and then deleting their keyness scores, because it prevents their counts from influencing the keyness scores of other terms. To exclude terms, save them to a plain text file in which there is one term per line, and then use the optional argument `--exclude-terms-path PATH/TO/EXCLUSIONS.TXT` to tell the script where to find that file. For example, the file in `sample_data/exclude_terms.txt` contains the English stop words used by NLTK; to exclude these words, you would use the following command:  
+```
+python keyness.py sample_data/paired.csv sample_data/keyness.csv --exclude-terms-path sample_data/exclude_terms.txt
+```
+
+The following optional arguments can be used to specify non-default formats for the input and/or output CSV files:  
+- `--corpus-names STUDY_STRING REFERENCE_STRING`: names of corpora that are used as prefixes in column headers in the input CSV (default is equivalent to `--corpus-names study reference`)  
+- `--target-corpus STUDY_STRING`: name of the target (study) corpus that is used as a prefix in column headers in the input CSV (default `study`)  
+- `--input-col-sep SEPARATOR_CHARACTER`: the character that is used to separate prefixes (corpus names) from suffixes (types of information) in column headers in the input CSV (deafults to `_`, as in `study_text` and `study_time`)  
+- `--text-col-suffix TEXT_STRING`: the suffix of the column in the input CSV that designates text (default `text`)  
+- `--time-col-suffix TIME_STRING`: the suffix of the column headers in the input CSV that designate entry creation times (default `time`; this should be the same as the argument `--time-column` provided to `align_corpora.py`)  
+- `--label-column LABEL_STRING`: the name of the column in the input CSV that designates the label of a pair of entries (default `label`; this should be the same as the argument `--label-column` provided to `align_corpora.py`)  
+- `--no-signing`: providing this flag causes the keyness scores not to be set to negative values when the word is underrepresented in the study corpus relative to the reference corpus; this represents the underlying statistic accurately, but can cause issues for interpretation because you will need to separately ensure that the study count is larger than the reference count in order to interpret a high score as indicating a key word  
+
 
 ## Contributors 
 
