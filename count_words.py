@@ -1,13 +1,15 @@
 """
 ===============================================================================
-COUNT_TWEET_WORDS.PY
+COUNT_WORDS.PY
 Authors: Simon Todd & Chloe Willis
 Date: February 2023
 
-This code counts the number of words in an iter of Tweets. To do so, Tweet text
-is normalized, i.e. punctuation is removed, strings of emoji are separated and
-removed, and words are made lowercase. The output is a word frequency dictionary
-that contains unique words and their counts. 
+This code counts the number of words in an iter of entries (e.g., Tweets, posts,
+articles, sentences, etc.). For the purposes of this counting, a 'word' is a
+series of characters surrounded by whitespace. To ensure clean counts, the text
+of each entry is normalized, i.e. punctuation is removed, strings of emoji are
+separated and removed, and words are made lowercase. The output is a word
+frequency dictionary that contains unique words and their counts. 
 ===============================================================================
 """
 
@@ -52,7 +54,7 @@ def normalize(word, emoji_to_text=False, remove_links=True):
     """Normalizes a provided word by lowercasing and stripping edge
     punctuation (excluding left-aligned @ and #).
     If emoji_to_text is True, converts emoji to their text shortcuts.
-    If remove_links is True, removes links from Tweet text.
+    If remove_links is True, removes links from the text.
     """
     word = word.lower()
     word = word.strip(",.?/[]\\{}|=+-–—_()*^!~`>‘’'\"“”…•&")
@@ -72,7 +74,7 @@ def extract_words(string, include_emoji=True, emoji_to_text=False,
     """Extracts a list of normalized words from a provided string.
     If include_emoji is True, emoji are included in the list.
     If emoji_to_text is True, emoji are converted to text form.
-    If remove_links is True, removes links from Tweet text.
+    If remove_links is True, removes links from the text.
     """
     string = space_out_punctuation(string)
     # Either remove or space out emoji
@@ -94,22 +96,23 @@ def extract_words(string, include_emoji=True, emoji_to_text=False,
             
     return words
 
-def get_tweets(in_path, column_name="tweet.text"):
-    """Reads a processed tweet CSV and yields a generator over rows in the
-    tweet column, with a provided column_name.
+def get_entries(in_path, column_name="text"):
+    """Reads a CSV in which each row corresponds to an entry and yields a
+    generator over the text for each entry, based on looking up the column
+    with a given name.
     """
     with open(in_path, encoding="utf-8") as in_file:
         reader = csv.DictReader(in_file)
         for row in reader:
             yield row[column_name]
 
-def count_words_in_tweets(tweets, **kwargs):
+def count_words_in_entries(entries, **kwargs):
     """Returns a dictionary counting how often each word occurs in an iter
-    of tweets (strings).
+    of entries (strings).
     """
     counter = dict()
-    for tweet in tweets:
-        words = extract_words(tweet, **kwargs)
+    for entry in entries:
+        words = extract_words(entry, **kwargs)
         for word in words:
             counter[word] = counter.get(word, 0) + 1
     return counter
@@ -131,17 +134,17 @@ def dump_counts(counter, out_path, sort_by_count=True):
 
             
 if __name__=="__main__":
-    parser = argparse.ArgumentParser(description = "Count words from tweets in CSV format")
+    parser = argparse.ArgumentParser(description = "Count words from entries in CSV format")
     parser.add_argument("in_path", metavar="INPUT", type=str, help="Path to the input .csv file")
     parser.add_argument("out_path", metavar="OUTPUT", type=str, help="Path to the output file")
-    parser.add_argument("--tweet-column", default="tweet.text", type=str, help="Name of column where tweets are stored")
+    parser.add_argument("--text-column", default="text", type=str, help="Name of column where entry text is stored")
     parser.add_argument("--no-emoji", dest="include_emoji", action="store_false", help="Exclude emoji from counts")
     parser.add_argument("--text-emoji", dest="emoji_to_text", action="store_true", help="Convert emoji to text")
     parser.add_argument("--sort-alpha", dest="sort_by_count", action="store_false", help="Sort words alphabetically (not by count)")
-    parser.add_argument("--keep-links", dest="remove_links", action="store_false", help="Keep links in the Tweet text")
+    parser.add_argument("--keep-links", dest="remove_links", action="store_false", help="Keep links in the text")
     args = parser.parse_args()
     
-    tweets = get_tweets(args.in_path, column_name=args.tweet_column)
-    counter = count_words_in_tweets(tweets, include_emoji=args.include_emoji, emoji_to_text=args.emoji_to_text,
-                                   remove_links=args.remove_links)
+    entries = get_entries(args.in_path, column_name=args.text_column)
+    counter = count_words_in_entries(entries, include_emoji=args.include_emoji, emoji_to_text=args.emoji_to_text,
+                                     remove_links=args.remove_links)
     dump_counts(counter, args.out_path, sort_by_count=args.sort_by_count)

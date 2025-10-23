@@ -4,9 +4,10 @@ COUNT_TIMEBINS.PY
 Authors: Simon Todd & Chloe Willis
 Date: July 2023
 
-This code bins and counts Tweets in a CSV file by time. It is incorporated within
-harvest_tweets.py, so it does not have to be used directly unless you decide to
-change the definition of the time bins after harvesting.
+This code bins and counts entries in a CSV file by time. It is incorporated within
+align_corpora.py, so it does not have to be used directly unless you want to
+examine the distribution of data across time, e.g. to compare different criteria
+for binning entries by time.
 ===============================================================================
 """
 
@@ -68,14 +69,14 @@ def bin_time(dt, interval=1, unit="days"):
     upper_limit = lower_limit + datetime.timedelta(**{unit: interval})
     return "{}_{}".format(lower_limit.isoformat(), upper_limit.isoformat())
 
-def bin_tweets_by_time(in_path, column_name="tweet.created_at", interval=1, unit="days"):
-    """Bins tweets into time intervals and returns a dictionary counting
-    how many tweets occur in a given interval.
+def bin_entries_by_time(in_path, column_name="time", interval=1, unit="days"):
+    """Bins entries into time intervals and returns a dictionary counting
+    how many entries occur in a given interval.
     
     Arguments
     ---------
-    in_path: str; the path to a parsed CSV file of tweets
-    column_name: str; the name of the column containing the time of the tweets
+    in_path: str; the path to a parsed CSV file of entries
+    column_name: str; the name of the column containing the time of the entries
     interval: int (default 1); the bin interval size (without units)
     unit: str (default "days"); the unit of the bin interval
               (valid options: "days", "hours", "minutes", "seconds")
@@ -96,16 +97,16 @@ def dump_counts(counter, out_path):
         json.dump(counter, out_file, indent=4)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = "Bin tweets in CSV format by time and count them")
+    parser = argparse.ArgumentParser(description = "Bin entries in CSV format by time and count them")
     parser.add_argument("in_paths", metavar="INPUTS", nargs="+", type=str, help="Paths to the input .csv files")
     parser.add_argument("out_path", metavar="OUTPUT", type=str, help="Path to the output .json file")
-    parser.add_argument("--column", default="tweet.created_at", type=str, help="Name of column where tweet times are stored")
+    parser.add_argument("--column", default="time", type=str, help="Name of column where timestamps are stored")
     parser.add_argument("--interval", default=1, type=int, help="The bin interval size (without units)")
     parser.add_argument("--unit", default="days", type=str, help="The unit of the bin interval (valid options: \"days\", \"hours\", \"minutes\", \"seconds\")")
     args = parser.parse_args()
     
     overall_counter = Counter()
     for path in args.in_paths:
-        counter = bin_tweets_by_time(path, column_name=args.column, interval=args.interval, unit=args.unit)
+        counter = bin_entries_by_time(path, column_name=args.column, interval=args.interval, unit=args.unit)
         overall_counter += counter
     dump_counts(overall_counter, args.out_path)
