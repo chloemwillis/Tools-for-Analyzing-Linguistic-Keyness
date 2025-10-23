@@ -71,6 +71,11 @@ be multiplied by a fixed multiplier, provided through the --count-multiplier arg
 ===============================================================================
 """
 
+# Allow imports from the parent directory, where non-archived code is located
+import os
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(parent_dir)
+
 from twarc.client2 import Twarc2
 from extract_tweets import jsonl_to_csv
 from count_timebins import bin_tweets_by_time, dump_counts
