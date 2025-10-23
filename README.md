@@ -14,8 +14,8 @@ We intend for this repository to be accessible to researchers regardless of tech
 3. [Overview](#overview)  
 4. [Using the codebase](#using-the-codebase)  
    1. [Data format](#data-format)  
-   2. [Labelling entries for grouping and/or exlusion](#labelling-entries)  
-   3. [Pairing entries across corpora](#pairing-entries)  
+   2. [Labelling entries for grouping and/or exclusion](#labelling-entries-for-grouping-andor-exclusion)  
+   3. [Pairing entries across corpora](#pairing-entries-across-corpora)  
    4. [Calculating keyness](#calculating-keyness)  
 5. [Contributors](#contributors)  
 
@@ -98,7 +98,7 @@ The names of columns must be identical across the study and reference corpora.
 
 We assume in what follows that you already have the text and (if relevant) time columns. The next step discusses the creation of labels.  
 
-### Labelling entries for grouping and/or exlusion
+### Labelling entries for grouping and/or exclusion
 
 Entries in each corpus can optionally be given a *label* that assigns them to a group. When pairing entries across corpora, members of a pair will be from the same group wherever possible. The calculation of keyness scores can be restricted to entries from particular groups. In this way, labelling can be used:  
 
